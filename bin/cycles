@@ -1,0 +1,80 @@
+#!/usr/bin/perl
+#
+# Used within the Vim editor when the visual editor is enabled: !cycles
+# It recalculates total cycle counts given in the line comment.
+#
+# It recognizes these formats:
+#   CPU / TIA cycles
+#       ; dd (dd) dd (dd)
+#       ; dd (dd) (dd)
+#   CPU cycles
+#       ; dd (dd)
+#       ; dd
+#
+# Usage: cycles [arg]
+#   !cycles         # starts from 0
+#   !cycles 31      # starts from 31
+#
+my $line = '';
+my $cpu_cycles = 0;
+my $tia_cycles = 0;
+
+if ($ARGV[0] =~ m/^(-?\d+)/) {
+    my $cpu = int($1);
+    my $tia = $cpu * 3;
+    $cpu_cycles += $cpu;
+    $tia_cycles += $tia;
+
+    shift;
+}
+
+while (<>) {
+    # dd (dd) dd (dd)
+    if (m/;\s*(\d+)\s*[(]\d+[)]\s*(\d+)\s*[(]\d+[)]/) {
+        my $cpu = int($1);
+        my $tia = $cpu * 3;
+
+        $cpu_cycles += $cpu;
+        $cpu_cycles = $cpu_cycles % 76;
+        $tia_cycles = $cpu_cycles * 3;
+
+        s/;\s*(\d+)(\s*)[(]\d+[)](\s*)(\d+)(\s*)[(]\d+[)]/; $cpu$2($cpu_cycles)$3$tia$4($tia_cycles)/;
+
+    # dd (dd) (dd)
+    } elsif (m/;\s*(\d+)\s*[(]\d+[)]\s*[(]\d+[)]/) {
+        my $cpu = int($1);
+        my $tia = $cpu * 3;
+
+        $cpu_cycles += $cpu;
+        $cpu_cycles = $cpu_cycles % 76;
+        $tia_cycles = $cpu_cycles * 3;
+
+        s/;\s*(\d+)(\s*)[(]\d+[)](\s*)[(]\d+[)]/; $cpu$2($cpu_cycles)$3($tia_cycles)/;
+
+    # dd (dd)
+    } elsif (m/;\s*(\d+)(\s*)[(]\d+[)]/) {
+        my $cpu = int($1);
+        my $tia = $cpu * 3;
+
+        $cpu_cycles += $cpu;
+        $cpu_cycles = $cpu_cycles % 76;
+        $tia_cycles = $cpu_cycles * 3;
+
+        s/;\s*(\d+)(\s*)[(]\d+[)]/; $cpu$2($cpu_cycles)/;
+
+    # dd
+    } elsif (m/;\s*(\d+)/) {
+        my $cpu = int($1);
+        my $tia = $cpu * 3;
+
+        $cpu_cycles += $cpu;
+        $cpu_cycles = $cpu_cycles % 76;
+        $tia_cycles = $cpu_cycles * 3;
+
+        s/;\s*(\d+)/; $cpu ($cpu_cycles)/;
+    }
+
+    print;
+}
+
+exit 0;
