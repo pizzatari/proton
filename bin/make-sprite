@@ -1,0 +1,342 @@
+#!/usr/bin/perl
+
+use Data::Dumper;
+use File::Basename;
+
+use constant DEFAULT_BLANK_LABEL => "BlankSprite";
+
+use constant IN_FILE_SUFFIX => ".dat";
+use constant OUT_FILE_SUFFIX => ".gfx";
+
+use constant NUM_PIXELS_WIDE => 48;
+use constant NUM_BITS_PER_CHAR => 8;
+use constant NUM_BYTES => (NUM_PIXELS_WIDE/NUM_BITS_PER_CHAR);
+
+sub PrintUsage {
+	printf "Usage: %s [ -h -r {1|0} -b {0|1} -pt {0|1} -br {0|1} -bl label -dir out-dir] inputfile\n\n", basename($0);
+
+    print "Defaults:\n";
+    print "    -r  1            : print reversed order (upside down)\n";
+    print "    -b  0            : print blank sprites (otherwise substitute with BlankSprite)\n";
+    print "    -pt 0            : print pointer lookup table\n";
+    print "    -br 0            : blank is reference only, no assignments\n";
+    print "    -bl label        : override default blank with label\n";
+    print "    -dir directory   : output gfx file in this directory\n\n";
+
+	print "Example input data format:\n\n";
+
+    print "# comment\n";
+	print "blank-ref: 0\n";
+	print "blank: BlankLabel\n";
+	print "label: SpriteName\n";
+    print "    ....888....88888....888....8888...88.....88..8...\n";
+    print "    ..88...88..88......88.88...88..88..88...88..888..\n";
+    print "    ..88...88..88.....88...88..88...88..88.88...888..\n";
+    print "    ..888888...8888...88...88..88...88..88888....8...\n";
+    print "    ..8888.....88.....8888888..88...88....8......8...\n";
+    print "    ..88.888...88.....88...88..88..88.....8..........\n";
+    print "    ..88..888..88888..88...88..8888.......8......8...\n";
+    print "    .................................................\n\n";
+
+
+	print "Notes:\n";
+	print qq{    A 'label' is required. Multiple sprites are allowed.\n};
+	print qq{    blank-ref: must appear before blank:\n};
+	print qq{    Characters [0.] convert to 0.\n};
+	print qq{    Characters [18#xXoO*@%] convert to 1.\n};
+	print qq{    Prefix comments with "#" or ";"\n};
+	print qq{      - "#" comments are stripped from output.\n};
+	print qq{      - ";" comments are preserved in output.\n};
+    print qq{    Spaces and blank lines stripped in output.\n};
+	print qq{    Only 48 characters are used:\n};
+    print qq{      - Excess characters are stripped.\n};
+    print qq{      - Missing characters are zeroed.\n\n};
+}
+
+my $eol = "\r\n";
+
+# files
+my $in_file = '';
+my $out_file = '';
+my $out_dir = '';
+
+# options
+my $print_reversed = 1;
+my $print_blanks = 0;
+my $print_pointer_table = 0;
+my $blank_label = DEFAULT_BLANK_LABEL;
+my $blank_ref = 0;
+
+my %params = (
+    "-o"    => \$out_file,
+    "-dir"  => \$out_dir,
+    "-r"    => \$print_reversed,
+    "-b"    => \$print_blanks,
+    "-pt"   => \$print_pointer_table,
+    "-br"   => \$blank_ref,
+    "-bl"   => \$blank_label,
+);
+
+ParseArgs();
+
+open(my $ifh, "<", $in_file) or die "Filed to open input file $!\n";
+open(my $ofh, ">", $out_file) or die "Can't create $out_file";
+
+binmode $ofh;
+
+my $next_label = "";
+while(!eof($ifh)) {
+
+    # sprite = array( [array of 1 or 0 digits] )
+	my ($label, @sprite) = NextSprite($ifh);
+	my (@sp0_col, @sp1_col, @sp2_col, @sp3_col, @sp4_col, @sp5_col);
+
+    # transform rows to columns
+	foreach my $row (@sprite) {
+		my ($sp0, $sp1, $sp2, $sp3, $sp4, $sp5) = RowToColumns(@$row);
+		push(@sp0_col, $sp0);
+		push(@sp1_col, $sp1);
+		push(@sp2_col, $sp2);
+		push(@sp3_col, $sp3);
+		push(@sp4_col, $sp4);
+		push(@sp5_col, $sp5);
+	}
+
+    # output sprite tables
+    if ($blank_ref == 0) {
+	    print $ofh "$label$eol";
+    }
+
+	if ($print_blanks > 0 || CountOnes(@sp0_col) > 0) {
+		PrintSprite($ofh, "${label}0", @sp0_col);
+	} else {
+		print $ofh "${label}0 SET $blank_label$eol";
+	}
+	if ($print_blanks > 0 || CountOnes(@sp1_col) > 0) {
+		PrintSprite($ofh, "${label}1", @sp1_col);
+	} else {
+		print $ofh "${label}1 SET $blank_label$eol";
+	}
+	if ($print_blanks > 0 || CountOnes(@sp2_col) > 0) {
+		PrintSprite($ofh, "${label}2", @sp2_col);
+	} else {
+		print $ofh "${label}2 SET $blank_label$eol";
+	}
+	if ($print_blanks > 0 || CountOnes(@sp3_col) > 0) {
+		PrintSprite($ofh, "${label}3", @sp3_col);
+	} else {
+		print $ofh "${label}3 SET $blank_label$eol";
+	}
+	if ($print_blanks > 0 || CountOnes(@sp4_col) > 0) {
+		PrintSprite($ofh, "${label}4", @sp4_col);
+	} else {
+		print $ofh "${label}4 SET $blank_label$eol";
+	}
+	if ($print_blanks > 0 || CountOnes(@sp5_col) > 0) {
+		PrintSprite($ofh, "${label}5", @sp5_col);
+	} else {
+		print $ofh "${label}5 SET $blank_label$eol";
+	}
+
+    # output sprite pointer lookup table
+	if ($print_pointer_table > 0) {
+		print $ofh "${label}Ptrs$eol";
+		if (CountOnes(@sp0_col) > 0) {
+			print $ofh "\tdc.w ${label}0$eol";
+		} else {
+			print $ofh "\tdc.w $blank_label$eol";
+		}
+		if (CountOnes(@sp1_col) > 0) {
+			print $ofh "\tdc.w ${label}1$eol";
+		} else {
+			print $ofh "\tdc.w $blank_label$eol";
+		}
+		if (CountOnes(@sp2_col) > 0) {
+			print $ofh "\tdc.w ${label}2$eol";
+		} else {
+			print $ofh "\tdc.w $blank_label$eol";
+		}
+		if (CountOnes(@sp3_col) > 0) {
+			print $ofh "\tdc.w ${label}3$eol";
+		} else {
+			print $ofh "\tdc.w $blank_label$eol";
+		}
+		if (CountOnes(@sp4_col) > 0) {
+			print $ofh "\tdc.w ${label}4$eol";
+		} else {
+			print $ofh "\tdc.w $blank_label$eol";
+		}
+		if (CountOnes(@sp5_col) > 0) {
+			print $ofh "\tdc.w ${label}5$eol";
+		} else {
+			print $ofh "\tdc.w $blank_label$eol";
+		}
+	}
+}
+
+close $ifh;
+close $ofh;
+close $file;
+exit 0;
+
+# -----------------------------------------------------------------------------------------
+
+sub ParseArgs() {
+    ARG: while($arg = shift @ARGV) {
+        if ($arg eq '-h') {
+            PrintUsage();
+            exit 0;
+        }
+
+        if ($arg =~ /^-/ && defined $params{$arg}) {
+            my $val = shift @ARGV;
+            ${$params{$arg}} = $val;
+        } else {
+            $in_file = $arg;
+            last ARG;
+        }
+    }
+
+    if ($in_file eq '') {
+        print "ERROR: input file must be provided\n\n";
+        PrintUsage();
+	    exit 2;
+    }
+
+    if ($out_file eq '') {
+        my ($out_name, $dir, $suffix) = fileparse($in_file, IN_FILE_SUFFIX);
+
+        if ($out_dir eq '') {
+            $out_file = sprintf("%s%s%s", $dir, $out_name, OUT_FILE_SUFFIX);
+        } else {
+            if ($out_dir !~ /\/$/) {
+                $out_dir .= '/';
+            }
+            $out_file = sprintf("%s%s%s", $out_dir, $out_name, OUT_FILE_SUFFIX);
+        }
+    }
+}
+
+sub CountOnes(@) {
+	my (@ary) = @_;
+
+	my $num_ones = 0;
+	foreach my $row (@ary) {
+		foreach my $bit (@$row) {
+			$num_ones++ if ($bit > 0);
+		}
+	}
+
+	return $num_ones;
+}
+
+sub NextSprite($) {
+	my ($fh) = @_;
+
+	my $label = $next_label;
+
+	# array( arrayref( # . # ... ), arrayref, ... ) 
+	my @bigsprite;	
+
+    my $passthrough = 0;
+	my $line;
+	LINE: while ($line = <$fh>) {	
+        chomp $line;
+        $line =~ s/[\r\n]//g;
+		if ($line =~ /^\s*#/ || $line =~ /^\s*$/) {
+			next LINE;
+		}
+
+		if ($line =~ /^\s*;/) {
+			print $ofh "$line$eol";
+			next LINE;
+		}
+
+		if ($line =~ m/^\s*blank-ref:\s*(\d+)$/i) {
+            # disables output until a label: is detected
+            $passthrough = 0;
+            $blank_ref = $1;
+            next LINE;
+        }
+
+		if ($line =~ m/^\s*blank:\s*(\S+)$/i) {
+            $passthrough = 0;
+            $blank_label = $1;
+            if ($blank_ref == 0) {
+                $passthrough = 1;
+			    print $ofh "$1$eol";
+            }
+            next LINE;
+        }
+
+		if ($line =~ m/^\s*label:\s*(\S+)/i) {
+            $blank_ref = 0;
+            $passthrough = 0;
+			if (@bigsprite > 0) {
+				$next_label = $1;
+				return ($label, @bigsprite);
+			} else {
+				$label = $1;
+			}
+			next LINE;
+		}
+
+        # when reference is set, disable output until a label: is detected
+		if ($blank_ref != 0) {
+            next LINE;
+        }
+
+        # output raw data until a sprite is detected
+        if ($passthrough)  {
+            print $ofh "$line$eol";
+            next LINE;
+        }
+
+		$line =~ s/\s//g;
+		$line =~ tr/.#xXoO8*@%/0111111111/;
+
+		my @bits = split //, $line;
+		@bits = splice(@bits, 0, NUM_PIXELS_WIDE);
+
+		push @bigsprite, \@bits;
+	}
+
+	return ($label, @bigsprite);
+}
+
+sub RowToColumns(@) {
+	my @row = @_;
+
+	my @sp0 = splice(@row, 0, NUM_BITS_PER_CHAR);
+	my @sp1 = splice(@row, 0, NUM_BITS_PER_CHAR);
+	my @sp2 = splice(@row, 0, NUM_BITS_PER_CHAR);
+	my @sp3 = splice(@row, 0, NUM_BITS_PER_CHAR);
+	my @sp4 = splice(@row, 0, NUM_BITS_PER_CHAR);
+	my @sp5 = splice(@row, 0, NUM_BITS_PER_CHAR);
+
+	return (\@sp0, \@sp1, \@sp2, \@sp3, \@sp4, \@sp5);
+}
+
+sub PrintSprite($$@) {
+	my ($file, $label, @sp) = @_;
+
+	print $file "$label$eol";
+	if ($print_reversed != 0) {
+		for (my $i = $#sp; $i >= 0; $i--) {
+			my $row = $sp[$i];
+
+			print $file "\tdc.b #%";
+			print $file join("", @$row);
+			print $file "$eol";
+		}
+	} else {
+		for (my $i = 0; $i < scalar(@sp); $i++) {
+			my $row = $sp[$i];
+
+			print $file "\tdc.b #%";
+			print $file join("", @$row);
+			print $file "$eol";
+		}
+	}
+}
+

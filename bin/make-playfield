@@ -1,0 +1,141 @@
+#!/usr/bin/perl
+
+# Script accepts a table of bits. 20 cols x N rows
+# The output are data tables in valid DASM syntax.
+# Bits are re-arranged to match playfield formats.
+#
+use Data::Dumper;
+
+use constant PF0_LEN => 4;
+use constant PF1_LEN => 8;
+use constant PF2_LEN => 8;
+
+use constant LEFT_HALF => 1;
+use constant RIGHT_HALF => 2;
+use constant BOTH_HALVES => 3;
+
+$\ = "\r\n";
+
+my $pfname = "Playfield";
+my $pixel_height = 1;
+my $ctrlpf = 0;         # 1=reflect 0=repeat
+my $revrows = 1;
+
+my $printhalves = BOTH_HALVES;
+my $num_cols = ($printhalves == BOTH_HALVES ? 6 : 3);
+
+# hash{ColumnName} -> Array -> String
+my %playfield;
+
+if (@ARGV == 0) {
+	print "Usage: make-playfield.pl inputfile";
+	exit 1;
+}
+
+my $infile = $ARGV[0];
+open my $fh, "<", $infile or die "Filed to open input file $!";
+
+# pre-populate with empty arrays
+for (my $i=0; $i < $num_cols; $i++) {
+    $playfield{"$pfname$i"} = [];
+}
+
+my $line;
+LINE: while ($line = <$fh>) {
+    # clean up input
+	next LINE if ($line =~ /^\s*#/);
+    if ($line =~ /^\s*;/) {
+        print $line;
+        next LINE;
+    }
+
+    chomp $line;
+    $line =~ s/[\s\r\n]//g;
+
+    if ($line =~ m/^\s*label:\s*(\S+)/) {
+        $pfname = $1;
+        next LINE;
+    }
+
+    # convert data to 1s and 0s
+    $line =~ tr/.#xXoO8*@%/0111111111/;
+
+    # pad out or truncate the string to 20 chars
+    $line = sprintf("%-20s", $line);
+    $line =~ tr/ /0/;
+
+    ParseLine($line);
+}
+
+my $column = $pfname."0";
+my $upfname = uc($pfname);
+
+print "${pfname}Begin SET *";
+
+for (my $i=0; $i < scalar(keys %playfield); $i++) {
+    my $column = $pfname.$i;
+    PrintColumn($column);
+    if ($i == 0) {
+        print "${upfname}_HEIGHT = * - ${pfname}Begin";
+    }
+}
+
+close $fh;
+exit 0;
+
+sub ParseLine($) {
+	my ($line) = @_;
+
+    my @bits = split //, $line;
+
+    my $num = 0;
+    my $column;
+
+    my @pf0 = reverse(splice(@bits, 0, PF0_LEN));
+    my @pf1 = splice(@bits, 0, PF1_LEN);
+    my @pf2 = reverse(splice(@bits, 0, PF2_LEN));
+
+    if ($printhalves & LEFT_HALF) {
+        $column = $pfname.$num++;
+        push @{$playfield{$column}}, join("",@pf0);
+
+        $column = $pfname.$num++;
+        push @{$playfield{$column}}, join("",@pf1);
+
+        $column = $pfname.$num++;
+        push @{$playfield{$column}}, join("",@pf2);
+    }
+
+    @pf0 = reverse(splice(@bits, 0, PF0_LEN));
+    @pf1 = splice(@bits, 0, PF1_LEN);
+    @pf2 = reverse(splice(@bits, 0, PF2_LEN));
+
+    if ($printhalves & RIGHT_HALF) {
+        $column = $pfname.$num++;
+        push @{$playfield{$column}}, join("",@pf0);
+
+        $column = $pfname.$num++;
+        push @{$playfield{$column}}, join("",@pf1);
+
+        $column = $pfname.$num++;
+        push @{$playfield{$column}}, join("",@pf2);
+    }
+}
+
+sub PrintColumn($) {
+	my ($col) = @_;
+
+    my @rows = @{$playfield{$col}};
+    if ($revrows) {
+        @rows = reverse(@rows);
+    }
+
+	print "$col";
+    foreach my $bits (@rows) {
+        my $str = sprintf("%-8s", $bits);
+        $str =~ tr/ /0/;
+        for (my $i=0; $i < $pixel_height; $i++) {
+		    print "    dc.b \%$str";
+        }
+	}
+}
