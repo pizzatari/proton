@@ -1,0 +1,20 @@
+TitlePlanetBegin SET *
+TitlePlanet1
+    dc.b %00000000
+    dc.b %10000000
+    dc.b %10000000
+    dc.b %11000000
+    dc.b %11100000
+    dc.b %11110000
+    dc.b %11111100
+    dc.b %11111111
+TITLEPLANET_HEIGHT = * - TitlePlanetBegin
+TitlePlanet2
+    dc.b %10000000
+    dc.b %11000000
+    dc.b %11000000
+    dc.b %11100000
+    dc.b %11110000
+    dc.b %11111000
+    dc.b %11111110
+    dc.b %11111111

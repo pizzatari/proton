@@ -20,6 +20,8 @@ my $pfname = "Playfield";
 my $pixel_height = 1;
 my $ctrlpf = 0;         # 1=reflect 0=repeat
 my $revrows = 1;
+my $columns = 6;
+my %suppress = ();
 
 my $printhalves = BOTH_HALVES;
 my $num_cols = ($printhalves == BOTH_HALVES ? 6 : 3);
@@ -35,25 +37,30 @@ if (@ARGV == 0) {
 my $infile = $ARGV[0];
 open my $fh, "<", $infile or die "Filed to open input file $!";
 
-# pre-populate with empty arrays
-for (my $i=0; $i < $num_cols; $i++) {
-    $playfield{"$pfname$i"} = [];
-}
-
 my $line;
 LINE: while ($line = <$fh>) {
     # clean up input
-	next LINE if ($line =~ /^\s*#/);
-    if ($line =~ /^\s*;/) {
-        print $line;
+    chomp $line;
+    $line =~ s/^\s+//g;
+
+    if ($line =~ m/^$|^[;#]/) {
         next LINE;
     }
 
-    chomp $line;
-    $line =~ s/[\s\r\n]//g;
-
-    if ($line =~ m/^\s*label:\s*(\S+)/) {
+    if ($line =~ m/^label:\s*(\S+)/) {
         $pfname = $1;
+        next LINE;
+    }
+
+    if ($line =~ m/^columns:\s*(\d+)/) {
+        $columns = $1;
+        next LINE;
+    }
+
+    if ($line =~ m/^suppress:\s*(.*)/) {
+        my $str = $1;
+        $str =~ s/\s//g;
+        map { $suppress{$_} = 1 } split(/,/, $str);
         next LINE;
     }
 
@@ -72,12 +79,19 @@ my $upfname = uc($pfname);
 
 print "${pfname}Begin SET *";
 
-for (my $i=0; $i < scalar(keys %playfield); $i++) {
+my $num_cols = scalar(keys %playfield);
+$num_cols = $columns < $num_cols ? $columns : $num_cols;
+
+COL: for (my $i=0, $cnt=0; $i < $num_cols; $i++) {
     my $column = $pfname.$i;
+    if ($suppress{$column} == 1) {
+        next COL;
+    }
     PrintColumn($column);
-    if ($i == 0) {
+    if ($cnt == 0) {
         print "${upfname}_HEIGHT = * - ${pfname}Begin";
     }
+    $cnt++;
 }
 
 close $fh;

@@ -1,0 +1,359 @@
+--- Symbol List (sorted by symbol)
+0.FREE_BYTES             0000                  
+1.CLEAR_STACK            f007              (R )
+10.Loop                  f098              (R )
+11.Laser0                f124              (R )
+11.Laser1                f14f              (R )
+11.NameLoop              f168              (R )
+11.TitleLoop             f0d2              (R )
+12.LINES                 0050              (R )
+12.Loop                  f0ae              (R )
+13.CYCLES                0014              (R )
+14.Sleep                 f143              (R )
+15.LINES                 0036              (R )
+15.Loop                  f19f              (R )
+17.Loop                  f1bb              (R )
+18.Return                f1ce              (R )
+2.Loop                   f00c              (R )
+20.Continue              f229              (R )
+21.Loop                  f229              (R )
+23.CYCLES                0004              (R )
+24.Delay                 f2a2              (R )
+24.SkipDec               f294              (R )
+25.Loop                  f2a2              (R )
+26.CheckDown             f2e7              (R )
+26.CheckFire             f327              (R )
+26.CheckLeft             f2d3              (R )
+26.CheckMovement         f307              (R )
+26.CheckRight            f2bc                  
+26.CheckUp               f2f7              (R )
+26.Dec1                  f2ca              (R )
+26.Dec2                  f2de              (R )
+26.Joystick              f2b2              (R )
+26.Pos                   f322              (R )
+26.Return                f333              (R )
+27.Row                   f406              (R )
+28.Row                   f43d              (R )
+29.Row                   f486              (R )
+33.Loop                  f587              (R )
+33.Pop                   f593              (R )
+33.Return                f5a4              (R )
+34.Good                  f5ca              (R )
+34.Loop                  f5a9              (R )
+34.Pop                   f5b7              (R )
+34.Return                f5d0              (R )
+36.Continue              f64b              (R )
+36.Loop                  f62e              (R )
+36.Return                f669              (R )
+36.Score                 f653              (R )
+37.Gfx                   f671              (R )
+38.HaltShip              f694              (R )
+38.Return                f698              (R )
+39.Continue              f6c0              (R )
+39.Enemies               f69b              (R )
+39.Reverse               f6b5              (R )
+4.PROC                   ff00              (R )
+4.Return                 f02d              (R )
+41.Div15                 f6c8              (R )
+42.Div15                 f6de              (R )
+43.Div15                 f6f6              (R )
+44.EngineSound           f72e              (R )
+44.LaserSound            f714              (R )
+44.NoInvert              f73b              (R )
+44.Save                  f71d              (R )
+45.Foward                f74e                  
+45.Return                f76b              (R )
+45.Reverse               f75f              (R )
+46.Blank1                f7be              (R )
+46.Blank2                f7d5              (R )
+46.ShiftDown             f76e              (R )
+47.Begin                 fc10              (R )
+47.Blank1                f828              (R )
+47.Blank2                f83f              (R )
+47.ShiftUp               f7d8              (R )
+48.max                   0006              (R )
+48.min                   0002              (R )
+48.range                 0008              (R )
+48.val                   0008                  
+49.max                   001f              (R )
+49.min                   0007              (R )
+49.range                 0008              (R )
+49.val                   0000                  
+5.PROC                   ff04              (R )
+5.Return                 f044              (R )
+50.Loop                  ff39              (R )
+51.Loop                  ff7b              (R )
+52.Sleep                 ff6d              (R )
+6.PROC                   ff08              (R )
+6.Return                 f05b              (R )
+8.VSLP1                  f060              (R )
+9.SkipAnim               f083              (R )
+ACCEL_X                  0001              (R )
+ACCEL_Y                  0001              (R )
+AUDC0                    0015              (R )
+AUDC1                    0016              (R )
+AUDF0                    0017              (R )
+AUDF1                    0018              (R )
+AUDV0                    0019              (R )
+AUDV1                    001a              (R )
+BASE_HEIGHT              0010                  
+BaseGfx                  fc50              (R )
+BL_OBJ                   0004                  
+BlankGfx                 fc00              (R )
+BUILDING_OBJ             0001              (R )
+Buildings                fcd0              (R )
+COLOR_BG                 00c0              (R )
+COLOR_BLACK              0000                  
+COLOR_DGRAY              0002                  
+COLOR_DGREEN             00c0                  
+COLOR_FG                 00c2              (R )
+COLOR_GRAY               0006                  
+COLOR_GREEN              00c2                  
+COLOR_HUD_SCORE          000e                  
+COLOR_LASER              0042              (R )
+COLOR_LGRAY              000a                  
+COLOR_LGREEN             00c6                  
+COLOR_RED                0042                  
+COLOR_WHITE              000e                  
+COLOR_YELLOW             001c                  
+COLUBK                   0009              (R )
+COLUP0                   0006              (R )
+COLUP1                   0007              (R )
+COLUPF                   0008              (R )
+Condo_HEIGHT             0010                  
+CondoGfx                 fc40              (R )
+CTRLPF                   000a              (R )
+CXBLPF                   0006                  
+CXCLR                    002c                  
+CXM0FB                   0004                  
+CXM0P                    0000                  
+CXM1FB                   0005                  
+CXM1P                    0001                  
+CXP0FB                   0002                  
+CXP1FB                   0003                  
+CXPPMM                   0007                  
+Delay                    0082              (R )
+Digit0                   fc80              (R )
+Digit1                   fc87              (R )
+Digit2                   fc8e              (R )
+Digit3                   fc95              (R )
+Digit4                   fc9c              (R )
+Digit5                   fca3              (R )
+Digit6                   fcaa              (R )
+Digit7                   fcb1              (R )
+Digit8                   fcb8              (R )
+Digit9                   fcbf              (R )
+DIGIT_HEIGHT             0007                  
+Digits                   fc80              (R )
+DigitTable               fcc6              (R )
+DrawTitleSprite          ff62              (R )
+DrawWideSprite56         ff37              (R )
+ENABL                    001f                  
+ENAM0                    001d              (R )
+ENAM1                    001e                  
+EndLine                  00db              (R )
+EnemiesUpdatePosition    f699              (R )
+ENEMY_OBJ                0000              (R )
+EngineFrequency          fd17              (R )
+EngineVolume             fd0f              (R )
+ExpanderRowKernel        f400              (R )
+EXPLOSION_HEIGHT         0010                  
+ExplosionGfx             fc30              (R )
+FIGHTER_HEIGHT           0010                  
+FighterGfx               fc20              (R )
+FPOINT_SCALE             0001              (R )
+FrameCtr                 0080              (R )
+FrameStart               f011              (R )
+FRICTION_X               0001              (R )
+FUEL_HEIGHT              0010                  
+FuelGfx                  fc60              (R )
+GameInit                 f1cf              (R )
+GameIO                   f2a8              (R )
+GameKernel               f23b              (R )
+GameOverscan             f27d              (R )
+GameVertBlank            f1e0              (R )
+GFX_BEGIN                fc00              (R )
+GRP0                     001b              (R )
+GRP1                     001c              (R )
+HMBL                     0024                  
+HMCLR                    002b                  
+HMM0                     0022              (R )
+HMM1                     0023              (R )
+HMOVE                    002a              (R )
+HMP0                     0020              (R )
+HMP1                     0021              (R )
+HorizPosition            f6c5              (R )
+HorizPositionBG          f6d7              (R )
+HorizPositionPF          f6ed              (R )
+HUDHeight                00db                  
+HUDKernel                f500              (R )
+HUDPalette               fd0c              (R )
+HUDSetup                 f5d1              (R )
+Init                     f00c                  
+InitPlayer               f572              (R )
+InitScreen               f569              (R )
+INPT0                    0008                  
+INPT1                    0009                  
+INPT2                    000a                  
+INPT3                    000b                  
+INPT4                    000c              (R )
+INPT5                    000d                  
+Interrupts               fffa                  
+INTIM                    0284              (R )
+JOY0_DOWN                0020              (R )
+JOY0_LEFT                0040              (R )
+JOY0_RIGHT               0080              (R )
+JOY0_UP                  0010              (R )
+JOY1_DOWN                0002              (R )
+JOY1_LEFT                0004              (R )
+JOY1_RIGHT               0008              (R )
+JOY1_UP                  0001              (R )
+JOY_FIRE                 0080              (R )
+JoyFire                  00d8              (R )
+KERNEL_BEGIN             f500              (R )
+LASER_AUDIO_FRAMES       0009                  
+LASER_AUDIO_RATE         0001                  
+LaserAudioFrame          00d9              (R )
+LaserCollision           f628              (R )
+LaserCon                 fd1f              (R )
+LaserFreq                fd28              (R )
+LaserGfx0                fb5c              (R )
+LaserGfx1                fb64              (R )
+LaserPtr                 0091              (R )
+LaserVol                 fd1f              (R )
+LINES_OVERSCAN           001e                  
+LINES_VBLANK             0025                  
+LINES_VSYNC              0003                  
+LocalVars                00da              (R )
+M0_OBJ                   0002              (R )
+M1_OBJ                   0003                  
+MAX_NUM_PTRS             0006              (R )
+MAX_POS_X                0095              (R )
+MAX_ROWS                 000b              (R )
+MAX_SPEED_X              0003              (R )
+MAX_SPEED_Y              000e              (R )
+MemEnd                   0091              (R )
+MIN_POS_X                0022              (R )
+MIN_SPEED_X              fffffffd              (R )
+MIN_SPEED_Y              fffffff2              (R )
+MISSILE_OBJ              0002              (R )
+Mode                     0081              (R )
+MODE_GAME                0001              (R )
+MODE_TITLE               0000                  
+ModeKernel               ff04              (R )
+ModeOverscan             ff08              (R )
+ModeVertBlank            ff00              (R )
+Mult6                    ff0c                  
+NO_ILLEGAL_OPCODES       0000 ????         (R )
+NUSIZ0                   0004              (R )
+NUSIZ1                   0005              (R )
+ORG_ADDR                 f000              (R )
+P0_OBJ                   0000              (R )
+P1_OBJ                   0001              (R )
+PF0                      000d              (R )
+PF1                      000e              (R )
+PF2                      000f              (R )
+PF_ROW_HEIGHT            0010                  
+PFPattern                fc70              (R )
+PlayAudio                f705              (R )
+PLAYER_OBJ               0000              (R )
+PLAYER_ROW               0000              (R )
+PlyrIdx                  00dc              (R )
+PosX0                    00c2              (R )
+PosX1                    00cd              (R )
+Ptr                      008f              (R )
+REFP0                    000b                  
+REFP1                    000c                  
+RESBL                    0014                  
+Reset                    f000              (R )
+RESM0                    0012                  
+RESM1                    0013                  
+RESMP0                   0028                  
+RESMP1                   0029                  
+RESP0                    0010              (R )
+RESP1                    0011                  
+RowKernel                f415              (R )
+RSYNC                    0003                  
+Score                    0091              (R )
+SCREEN_HEIGHT            00c0                  
+SCREEN_WIDTH             00a0                  
+ScreenPosY               0094              (R )
+ScreenSpeedY             0095              (R )
+SetTitleName             ffb5              (R )
+SHIP_HEIGHT              0010                  
+ShipGfx                  fc00              (R )
+ShipPalette0             fcec              (R )
+ShipPalette1             fcfc                  
+ShipUpdatePosition       f67b              (R )
+ShrinkerRowKernel        f45e              (R )
+SpawnBottom              f7d6              (R )
+SpawnBuildings           f583              (R )
+SpawnEnemies             f5a5              (R )
+SpawnSprite              f748              (R )
+SpawnTop                 f76c              (R )
+SpeedX0                  00ac              (R )
+SpeedX1                  00b7              (R )
+SpritePtrs               0083              (R )
+SpritePtrsClear          f66b              (R )
+Sprites0                 0096              (R )
+Sprites1                 00a1              (R )
+SWACNT                   0281                  
+SWBCNT                   0283                  
+SWCHA                    0280              (R )
+SWCHB                    0282              (R )
+SWITCH_BW                0008                  
+SWITCH_DIFF0             0040                  
+SWITCH_DIFF1             0080                  
+SWITCH_RESET             0001              (R )
+SWITCH_SELECT            0002                  
+T1024T                   0297                  
+Temp                     008f              (R )
+Temp2                    0090              (R )
+TIA_BASE_ADDRESS         0000              (R )
+TIA_BASE_READ_ADDRESS    0000              (R )
+TIA_BASE_WRITE_ADDRESS   0000              (R )
+TIM1T                    0294                  
+TIM64T                   0296              (R )
+TIM8T                    0295                  
+TIMINT                   0285                  
+TitleIO                  f1c1              (R )
+TitleKernel              f0a4              (R )
+TitleName                fb40              (R )
+TitleName0               fb40              (R )
+TitleName1               fb47              (R )
+TitleName2               fb4e              (R )
+TitleName3               fb55              (R )
+TitleName30              fb10              (R )
+TitleName31              fb18              (R )
+TitleName32              fb20              (R )
+TitleName33              fb28              (R )
+TitleName34              fb30              (R )
+TitleName35              fb38              (R )
+TITLENAME3_HEIGHT        0008                  
+TitleName3Begin          fb10              (R )
+TitleName4               fc00                  
+TitleName5               fc00                  
+TitleNamePalette         fce4              (R )
+TitleOverscan            f1a5              (R )
+TitlePalette             fcd4              (R )
+TitlePlanet1             fb00              (R )
+TitlePlanet2             fb08              (R )
+TITLEPLANET_HEIGHT       0008                  
+TitlePlanetBegin         fb00              (R )
+TitleVertBlank           f068              (R )
+UpdateVerticalPositions  f6c4                  
+VBLANK                   0001              (R )
+VDELBL                   0027                  
+VDELP0                   0025              (R )
+VDELP1                   0026              (R )
+VERSION_MACRO            006a                  
+VERSION_VCS              0069                  
+VerticalSync             f05e              (R )
+VIDEO_MODE               0001              (R )
+VIDEO_NTSC               0001              (R )
+VIDEO_PAL                0002              (R )
+VIDEO_PAL60              0003              (R )
+VIDEO_SECAM              0004                  
+VSYNC                    0000              (R )
+WSYNC                    0002              (R )
+--- End of Symbol List.

@@ -52,30 +52,6 @@ TitleNamePalette
     dc.b $8c
     dc.b $8e
     dc.b 0
-#if 0
-    dc.b $8c
-    dc.b $8e
-    dc.b $0e
-    dc.b $1c
-    dc.b $1c
-    dc.b $1c
-    dc.b $1c
-    dc.b $1c
-#endif
-#if 0
-    ;dc.b $80
-    ;dc.b $82
-    ;dc.b $84
-    ;dc.b $86
-    dc.b $88
-    dc.b $8a
-    dc.b $8c
-    dc.b $8e
-    dc.b $1c
-    dc.b $1c
-    dc.b $1c
-    dc.b $1c
-#endif
 
 ShipPalette0
     dc.b $00

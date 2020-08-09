@@ -76,24 +76,55 @@
         nop                         ; +2
         ; 17 total cycles = 8 + 9
     ENDM
-    MAC SLEEP_32
+
+    MAC SLEEP_26
+        ldy #4                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    5 * 5 - 1 = 24 cycles
+    ENDM
+
+    MAC SLEEP_28
+        ldy #4                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    5 * 5 - 1 = 24 cycles
+        nop                         ; +2
+    ENDM
+
+    MAC SLEEP_30
+        ldy #4                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    5 * 5 - 1 = 24 cycles
+        nop                         ; +2
+        nop                         ; +2
+    ENDM
+
+    MAC SLEEP_33
         ldy #5                      ; +2
 .Sleep
         dey                         ; +2
         bpl .Sleep                  ; +3    6 * 5 - 1 = 29 cycles
-        bit $0                      ; +3
-        ; 32 total cycles = 5 + 29
+        nop                         ; +2
     ENDM
+
     MAC SLEEP_34
         ldy #5                      ; +2
 .Sleep
         dey                         ; +2
         bpl .Sleep                  ; +3    6 * 5 - 1 = 29 cycles
         bit $0                      ; +3
-        nop                         ; +2
-        ; 34 total cycles = 5 + 29
     ENDM
-    MAC SLEEP_35
+
+    MAC SLEEP_36
+        ldy #6                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    7 * 5 - 1 = 34 cycles
+    ENDM
+
+    MAC SLEEP_37
         ldy #5                      ; +2
 .Sleep
         dey                         ; +2
@@ -101,14 +132,15 @@
         nop                         ; +2
         nop                         ; +2
         nop                         ; +2
-        ; 35 total cycles = 6 + 29
     ENDM
-    MAC SLEEP_36
+
+    MAC SLEEP_38
         ldy #6                      ; +2
 .Sleep
         dey                         ; +2
         bpl .Sleep                  ; +3    7 * 5 - 1 = 34 cycles
-        ; 36 total cycles = 2 + 34
+        nop                         ; +2
+        ; 38 total cycles = 4 + 34
     ENDM
     MAC SLEEP_43
         ldy #7                      ; +2

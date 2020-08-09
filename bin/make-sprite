@@ -5,15 +5,15 @@ use File::Basename;
 
 use constant DEFAULT_BLANK_LABEL => "BlankSprite";
 
-use constant IN_FILE_SUFFIX => ".dat";
-use constant OUT_FILE_SUFFIX => ".gfx";
+use constant IN_FILE_SUFFIX => ".msp";
+use constant OUT_FILE_SUFFIX => ".sp";
 
 use constant NUM_PIXELS_WIDE => 48;
 use constant NUM_BITS_PER_CHAR => 8;
 use constant NUM_BYTES => (NUM_PIXELS_WIDE/NUM_BITS_PER_CHAR);
 
 sub PrintUsage {
-	printf "Usage: %s [ -h -r {1|0} -b {0|1} -pt {0|1} -br {0|1} -bl label -dir out-dir] inputfile\n\n", basename($0);
+	printf "Usage: %s [ -h -r {1|0} -b {0|1} -pt {0|1} -br {0|1} -bl label -dir out-dir -o out-file] inputfile\n\n", basename($0);
 
     print "Defaults:\n";
     print "    -r  1            : print reversed order (upside down)\n";
@@ -21,6 +21,7 @@ sub PrintUsage {
     print "    -pt 0            : print pointer lookup table\n";
     print "    -br 0            : blank is reference only, no assignments\n";
     print "    -bl label        : override default blank with label\n";
+    print "    -o file          : output gfx to this file\n\n";
     print "    -dir directory   : output gfx file in this directory\n\n";
 
 	print "Example input data format:\n\n";

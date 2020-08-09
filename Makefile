@@ -29,7 +29,7 @@ $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM)
 	$(ASM) "$<" $(ASM_FLAGS) -o"$@"
 
 %.sp: %.msp $<
-	$(PERL) $(MAKE_SPRITE) "$<"
+	$(PERL) $(MAKE_SPRITE) "$<" -o"$@"
 
 %.pf: %.mpf
 	$(PERL) $(MAKE_PFIELD) "$<" > $@
@@ -38,7 +38,7 @@ $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM)
 	$(M4) "$<" > "$@"
 
 %.bin: %.s $<
-	$(ASM) "$<" $(FLAGS) -o"$@"
+	$(ASM) "$<" $(ASM_FLAGS) -o"$@"
 
 .PHONY: clean
 clean:
