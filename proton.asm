@@ -534,15 +534,21 @@ GameVertBlank SUBROUTINE
 .Found
 #endif
 
+    ; position 3 medium
+    lda #3
+    sta NUSIZ1
+
     ; positon sprites
     ldx #BUILDING_OBJ
-    lda #100
+    lda #76
     jsr HorizPosition
+
     ldx #MISSILE_OBJ
     lda PosX0+PLAYER_ROW
     clc
     adc #4          ; adjust offset
     jsr HorizPosition
+
     sta WSYNC
     sta HMOVE
 
