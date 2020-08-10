@@ -221,6 +221,9 @@ TitleVertBlank SUBROUTINE
 
     lda #COLOR_WHITE
     sta COLUP0
+    lda #0
+    sta GRP0
+    sta GRP1
 
     lda #<LaserGfx0
     sta LaserPtr
@@ -234,7 +237,7 @@ TitleVertBlank SUBROUTINE
     sta LaserPtr
 .SkipAnim
 
-    jsr SetTitleName
+    jsr SetTitleBattle
 
     ldx #P0_OBJ
     lda #19
@@ -261,7 +264,7 @@ TitleKernel SUBROUTINE      ; 6 (6)
     ; ------------------------------------------------------------------------
     ; blank space
     ; ------------------------------------------------------------------------
-    SLEEP_LINES 80
+    SLEEP_LINES 84
 
     lda #3
     sta VDELP0              ; 3
@@ -284,7 +287,7 @@ TitleKernel SUBROUTINE      ; 6 (6)
     ; planet
     ; ------------------------------------------------------------------------
     clc                     ; 2 (40)
-    ldy #31                 ; 2 (42)
+    ldy #TITLEPLANET_HEIGHT*4-1 ; 2 (42)
 .TitleLoop
     tya                     ; 2 (58)
     lsr                     ; 2 (60)
@@ -302,21 +305,24 @@ TitleKernel SUBROUTINE      ; 6 (6)
     lda TitlePlanet2,x      ; 4 (48)
     sta PF2                 ; 3 (51)
     dey                     ; 2 (53)
-    cpy #4                 ; 2 (55) 
+    cpy #4                  ; 2 (55) 
     bpl .TitleLoop          ; 2 (57)
 
-    ldy #7-1                ; 2 (59)
-    jsr DrawTitleSprite     ; 6 (65)
+    ldy #4-1                ; 2 (59)
+    jsr DrawTitleSprite     ; 6 (65)    returns on cycle 18
 
     ; ------------------------------------------------------------------------
-    ; 1 (56) line blank spacer
+    ; 1 line blank spacer
     ; ------------------------------------------------------------------------
-    ldx #P0_OBJ             ; 2 (58)
-    lda #164                ; 2 (60)
-    ldy #0                  ; 2
-    jsr HorizPositionBG     ; 6 (68)
+    ldy #0                  ; 2 (20)
+    sta GRP0                ; 3 (23)
+    sta GRP1                ; 3 (26)
 
-    lda #0                  ; 2
+    ldx #P0_OBJ             ; 2 (28)
+    lda #164                ; 2 (30)
+    jsr HorizPositionBG     ; 6 (36)
+
+    lda #0                  ; 2 (2)
     sta WSYNC
     sta HMOVE               ; 3 (3) 
     sta PF0                 ; 3 (6)
@@ -335,34 +341,33 @@ TitleKernel SUBROUTINE      ; 6 (6)
     ldy #7                  ; 2 (31)
 .Laser0
     lda (LaserPtr),y        ; 5 (5)
-    sta GRP0                ; 3 (8)
+    sta GRP0                ; 3 (3)
     sta WSYNC
-    dey                     ; 2 (10)
-    cpy #4                  ; 2 (12)
-    bne .Laser0             ; 2 (14)
+    dey                     ; 2 (5)
+    cpy #4                  ; 2 (7)
+    bne .Laser0             ; 2 (9)
 
     ; ------------------------------------------------------------------------
     ; laser middle line
     ; ------------------------------------------------------------------------
-    ldy #4                  ; 2 (16) 
-    lda (LaserPtr),y        ; 5 (21)
-    ldx #$ff                ; 2 (23)
-    ldy #0                  ; 2 (25)
+    lda (LaserPtr),y        ; 5 (14)
+    ldx #$ff                ; 2 (16)
+    ldy #0                  ; 2 (18)
+    sta GRP0                ; 3 (21)
 
     sta WSYNC
-    sta GRP0                ; 3 (3)
-    stx PF0                 ; 3 (6)
-    stx PF1                 ; 3 (9)
-    stx PF2                 ; 3 (12)
-    SLEEP_38                ; 38 (50)
-    lda #$3f                ; 2 (52)
-    sta PF2                 ; 3 (55)
+    stx PF0                 ; 3 (3)
+    stx PF1                 ; 3 (6)
+    stx PF2                 ; 3 (9)
+    SLEEP_38                ; 38 (47)
+    lda #$3f                ; 2 (49)
+    sta PF2                 ; 3 (52)
 
     ; ------------------------------------------------------------------------
     ; laser bottom
     ; ------------------------------------------------------------------------
-    ldx #0                  ; 2 (57)
-    ldy #3                  ; 2 (59)
+    ldx #0                  ; 2 (54)
+    ldy #3                  ; 2 (56)
 .Laser1
     lda LaserGfx0,y         ; 4 (21)
     lda (LaserPtr),y        ; 5 (26)
@@ -381,25 +386,25 @@ TitleKernel SUBROUTINE      ; 6 (6)
     ; PROTON title
     ; ------------------------------------------------------------------------
     clc                     ; 2 (23)
-    ldy #TITLENAME3_HEIGHT-1; 2 (25)
+    ldy #TITLEPROTON_HEIGHT-1; 2 (25)
 .NameLoop
     tya                     ; 2 (60)
     sta WSYNC
     tax                     ; 2 (2)
     lda TitleNamePalette,x  ; 4 (6)
     sta COLUPF              ; 3 (9)
-    lda TitleName30,x       ; 4 (13)
+    lda TitleProton0,x      ; 4 (13)
     sta PF0                 ; 3 (16)
-    lda TitleName31,x       ; 4 (20)
+    lda TitleProton1,x      ; 4 (20)
     sta PF1                 ; 3 (23)
-    lda TitleName32,x       ; 4 (27)
+    lda TitleProton2,x      ; 4 (27)
     sta PF2                 ; 3 (30)
     nop                     ; 2 (32)
-    lda TitleName33,x       ; 4 (36)
+    lda TitleProton3,x      ; 4 (36)
     sta PF0                 ; 3 (39)
-    lda TitleName34,x       ; 4 (43)
+    lda TitleProton4,x      ; 4 (43)
     sta PF1                 ; 3 (46)
-    lda TitleName35,x       ; 4 (50)
+    lda TitleProton5,x      ; 4 (50)
     sta PF2                 ; 3 (53)
     dey                     ; 2 (55)
     bpl .NameLoop           ; 2 (57)
@@ -412,7 +417,48 @@ TitleKernel SUBROUTINE      ; 6 (6)
     sta PF0                 ; 3 (3)
     sta PF1                 ; 3 (6) 
     sta PF2                 ; 3 (9)
-    SLEEP_LINES 54
+
+    ; ------------------------------------------------------------------------
+    ; copyright
+    ; ------------------------------------------------------------------------
+    ldx #P0_OBJ
+    lda #71
+    jsr HorizPosition
+    ldx #P1_OBJ
+    lda #71+8
+    jsr HorizPosition
+    sta WSYNC
+    sta HMOVE
+
+    lda #3
+    sta VDELP0
+    sta VDELP1
+    sta NUSIZ0
+    sta NUSIZ1
+
+    lda #$86
+    sta COLUP0
+    sta COLUP1
+
+    SLEEP_LINES 33
+
+    jsr SetTitleCopy
+    ldy #7-1
+    jsr DrawWideSprite56
+
+    jsr SetTitleName
+    ldy #5-1
+    jsr DrawWideSprite56
+
+    lda #0
+    sta VDELP0
+    sta VDELP1
+    sta GRP0
+    sta GRP1
+    sta NUSIZ0
+    sta NUSIZ1
+
+    SLEEP_LINES 2
     rts
 
 TitleOverscan SUBROUTINE
@@ -491,7 +537,6 @@ GameVertBlank SUBROUTINE
     ; positon sprites
     ldx #BUILDING_OBJ
     lda #100
-    ;lda #60
     jsr HorizPosition
     ldx #MISSILE_OBJ
     lda PosX0+PLAYER_ROW
@@ -504,7 +549,7 @@ GameVertBlank SUBROUTINE
     lda #COLOR_LASER
     sta COLUP0+PLAYER_OBJ
 
-    ; enable/disable fire graphics
+    ; enable/disable laser
     lda Delay
     bne .Continue
     lda JoyFire
@@ -514,18 +559,18 @@ GameVertBlank SUBROUTINE
     jsr LaserCollision
 .Continue
 
+    ; clear fine motion for subsequent HMOVEs
+    lda #0
+    sta HMM0
+    sta HMP0
+    sta HMM1
+    sta HMP1
+
     TIMER_WAIT
    
     ; turn on the display
     lda #0
     sta VBLANK
-
-    ; clear fine motion for subsequent HMOVEs
-    sta HMM0
-    sta HMP0
-    sta HMM1
-    ;lda #8 << 4
-    sta HMP1
 
     rts
 
@@ -1487,6 +1532,8 @@ SpawnBottom SUBROUTINE
     include "dat/title-planet.pf"
     include "dat/title-proton.pf"
     include "dat/title-battle.sp"
+    include "dat/title-copy.sp"
+    include "dat/title-name.sp"
 
 LaserGfx0
     dc.b %00000000
@@ -1723,7 +1770,7 @@ Digit9
     IF >GFX_BEGIN != >*
         ECHO "(1) Graphics crossed a page boundary!", (GFX_BEGIN&$ff00), (*&$ff00)
     ENDIF
-    ECHO "Gfx page:", GFX_BEGIN, "-", *, "uses", (* - GFX_BEGIN)d, "bytes"
+    ECHO "Page", (GFX_BEGIN&$ff00 ), "has", (((GFX_BEGIN+$100)&$ff00)-*)d, "bytes remaining"
 
 DigitTable
     dc.b <Digit0, <Digit1, <Digit2, <Digit3, <Digit4
@@ -1731,7 +1778,6 @@ DigitTable
 
 Buildings
     dc.b <BlankGfx, <CondoGfx, <BaseGfx, <FuelGfx
-
 
     include "lib/ntsc.asm"
     include "lib/pal.asm"
@@ -1769,10 +1815,6 @@ LaserCon
 LaserFreq
     dc.b 0, 1, 0, 1, 0, 1, 0, 1, 0
 
-    ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
-
-    ORG ORG_ADDR + $f00
-
 ; Procedure tables
 ModeVertBlank
     dc.w TitleVertBlank     ; MODE_TITLE
@@ -1784,13 +1826,18 @@ ModeOverscan
     dc.w TitleOverscan      ; MODE_TITLE
     dc.w GameOverscan       ; MODE_GAME
 
+#if 0
 Mult6
     dc.b   0,   6,  12,  18,  24,  30,  36,  42,  48,  54
     dc.b  60,  66,  72,  78,  84,  90,  96, 102, 108, 114
     dc.b 120, 126, 132, 138, 144, 150, 156, 162, 168, 174
     dc.b 180, 186, 192, 198, 204, 210, 216, 222, 228, 234
     dc.b 240, 246, 252
+#endif
 
+    ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
+
+    ORG ORG_ADDR + $f00
 ; -----------------------------------------------------------------------------
 ; Desc:     Draws a 48-bit wide sprite centered on the screen.
 ;           Position GRP0 to pixel 56 (TIA cycle 124).
@@ -1798,6 +1845,7 @@ Mult6
 ; Input:    Y register (height-1)
 ; Output:
 ; -----------------------------------------------------------------------------
+KERNEL_BEGIN SET *
 DrawWideSprite56 SUBROUTINE ; 6 (6)
     sty Temp                ; 3 (9)
 .Loop
@@ -1857,7 +1905,7 @@ DrawTitleSprite SUBROUTINE
     lda (SpritePtrs+4),y    ; 5 (14)   (42)
     sta GRP0                ; 3 (17)   (51)    D3     D1      D2     D2
     lda (SpritePtrs+6),y    ; 5 (22)   (66)
-    ldx #0                  ; 2 (24)   (72)
+    ldx #0                  ; 2 (24)   (72)             !
     sta GRP1                ; 3 (27)   (81)    D3     D3      D4     D2!
     stx GRP0                ; 3 (30)   (90)    D5     D3!     D4     D4
     stx GRP1                ; 3 (33)   (99)    D5     D5      D6     D4!
@@ -1866,31 +1914,33 @@ DrawTitleSprite SUBROUTINE
     sta PF1                 ; 3 (43)  (129)
     lda TitlePlanet2        ; 4 (47)  (141)
     sta PF2                 ; 3 (50)  (150)
-    dey                     ; 2 (52)  (156)                            !
+    dey                     ; 2 (52)  (156)
     bpl .Loop               ; 3 (55)  (165) 
 
+    lda #0                  ; 2 (57) 
     sta WSYNC
-    lda #0                  ; 2 (2) 
-    sta COLUBK              ; 3 (5) 
-    sta PF0                 ; 3 (8)
-    sta PF1                 ; 3 (11)
-    sta PF2                 ; 3 (14)
-    rts                     ; 6 (20)
+    sta COLUBK              ; 3 (3) 
+    sta PF0                 ; 3 (6)
+    sta PF1                 ; 3 (9)
+    sta PF2                 ; 3 (12)
+    rts                     ; 6 (18)
 
-    ECHO "Page", *&$ff00, "has", ($fffa - (*&$ff00))d, "bytes remaining"
+    IF >KERNEL_BEGIN != >*
+        ECHO "(3) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
+    ENDIF
 
-SetTitleName SUBROUTINE
-    ; set up graphics for title name
-    lda #<TitleName0
+SetTitleBattle SUBROUTINE
+    ; set up graphics for battle title
+    lda #<TitleBattle0
     sta SpritePtrs
-    lda #<TitleName1
+    lda #<TitleBattle1
     sta SpritePtrs+2
-    lda #<TitleName2
+    lda #<TitleBattle2
     sta SpritePtrs+4
-    lda #<TitleName3
+    lda #<TitleBattle3
     sta SpritePtrs+6
 
-    lda #>TitleName
+    lda #>TitleBattle
     sta SpritePtrs+1
     sta SpritePtrs+3
     sta SpritePtrs+5
@@ -1903,6 +1953,56 @@ SetTitleName SUBROUTINE
     sta SpritePtrs+9
     sta SpritePtrs+11
     rts
+
+SetTitleCopy SUBROUTINE
+    ; set up graphics for title name
+    lda #<TitleCopy0
+    sta SpritePtrs+2
+    lda #<TitleCopy1
+    sta SpritePtrs+4
+    lda #<TitleCopy2
+    sta SpritePtrs+6
+
+    lda #>TitleCopy
+    sta SpritePtrs+3
+    sta SpritePtrs+5
+    sta SpritePtrs+7
+
+    lda #<BlankGfx
+    sta SpritePtrs
+    sta SpritePtrs+8
+    sta SpritePtrs+10
+    lda #>BlankGfx
+    sta SpritePtrs+1
+    sta SpritePtrs+9
+    sta SpritePtrs+11
+    rts
+
+SetTitleName SUBROUTINE
+    ; set up graphics for title name
+    lda #<TitleName0
+    sta SpritePtrs
+    lda #<TitleName1
+    sta SpritePtrs+2
+    lda #<TitleName2
+    sta SpritePtrs+4
+    lda #<TitleName3
+    sta SpritePtrs+6
+    lda #<TitleName4
+    sta SpritePtrs+8
+    lda #<TitleName5
+    sta SpritePtrs+10
+
+    lda #>TitleName
+    sta SpritePtrs+1
+    sta SpritePtrs+3
+    sta SpritePtrs+5
+    sta SpritePtrs+7
+    sta SpritePtrs+9
+    sta SpritePtrs+11
+    rts
+
+    ECHO "Page", (*&$ff00), "has", ($fffa - *)d, "bytes remaining"
 
 ; -----------------------------------------------------------------------------
 ; Interrupts

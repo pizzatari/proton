@@ -326,7 +326,7 @@ sub PrintSprite($$@) {
 		for (my $i = $#sp; $i >= 0; $i--) {
 			my $row = $sp[$i];
 
-			print $file "\tdc.b #%";
+			print $file "\tdc.b %";
 			print $file join("", @$row);
 			print $file "$eol";
 		}
@@ -334,7 +334,7 @@ sub PrintSprite($$@) {
 		for (my $i = 0; $i < scalar(@sp); $i++) {
 			my $row = $sp[$i];
 
-			print $file "\tdc.b #%";
+			print $file "\tdc.b %";
 			print $file join("", @$row);
 			print $file "$eol";
 		}
