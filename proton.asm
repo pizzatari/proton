@@ -1961,7 +1961,30 @@ SetTitleBattle SUBROUTINE
     rts
 
 SetTitleCopy SUBROUTINE
-    ; set up graphics for title name
+    lda #<TitleCopy0
+    sta SpritePtrs
+    lda #<TitleCopy1
+    sta SpritePtrs+2
+    lda #<TitleCopy2
+    sta SpritePtrs+4
+    lda #<TitleCopy3
+    sta SpritePtrs+6
+    lda #<TitleCopy4
+    sta SpritePtrs+8
+
+    lda #>TitleCopy
+    sta SpritePtrs+1
+    sta SpritePtrs+3
+    sta SpritePtrs+5
+    sta SpritePtrs+7
+    sta SpritePtrs+9
+
+    lda #<BlankGfx
+    sta SpritePtrs+10
+    lda #>BlankGfx
+    sta SpritePtrs+11
+
+#if 0
     lda #<TitleCopy0
     sta SpritePtrs+2
     lda #<TitleCopy1
@@ -1982,6 +2005,7 @@ SetTitleCopy SUBROUTINE
     sta SpritePtrs+1
     sta SpritePtrs+9
     sta SpritePtrs+11
+#endif
     rts
 
 SetTitleName SUBROUTINE

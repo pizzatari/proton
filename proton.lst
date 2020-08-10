@@ -909,7 +909,7 @@
     225  f073		       85 1b		      sta	GRP0
     226  f075		       85 1c		      sta	GRP1
     227  f077
-    228  f077		       a9 7d		      lda	#<LaserGfx0
+    228  f077		       a9 8b		      lda	#<LaserGfx0
     229  f079		       85 91		      sta	LaserPtr
     230  f07b		       a9 fb		      lda	#>LaserGfx0
     231  f07d		       85 92		      sta	LaserPtr+1
@@ -917,7 +917,7 @@
     233  f07f		       a5 80		      lda	FrameCtr
     234  f081		       29 08		      and	#%00001000
     235  f083		       d0 04		      bne	.SkipAnim
-    236  f085		       a9 85		      lda	#<LaserGfx1
+    236  f085		       a9 93		      lda	#<LaserGfx1
     237  f087		       85 91		      sta	LaserPtr
     238  f089				   .SkipAnim
     239  f089
@@ -1105,7 +1105,7 @@
     369  f153		       a2 00		      ldx	#0	; 2 (54)
     370  f155		       a0 03		      ldy	#3	; 2 (56)
     371  f157				   .Laser1
-    372  f157		       b9 7d fb 	      lda	LaserGfx0,y	; 4 (21)
+    372  f157		       b9 8b fb 	      lda	LaserGfx0,y	; 4 (21)
     373  f15a		       b1 91		      lda	(LaserPtr),y	; 5 (26)
     374  f15c		       85 02		      sta	WSYNC
     375  f15e		       85 1b		      sta	GRP0	; 3 (3)
@@ -1188,7 +1188,7 @@
     446  f1d1		       a0 06		      ldy	#7-1
     447  f1d3		       20 00 ff 	      jsr	DrawWideSprite56
     448  f1d6
-    449  f1d6		       20 ca ff 	      jsr	SetTitleName
+    449  f1d6		       20 ce ff 	      jsr	SetTitleName
     450  f1d9		       a0 04		      ldy	#5-1
     451  f1db		       20 00 ff 	      jsr	DrawWideSprite56
     452  f1de
@@ -2419,93 +2419,107 @@
       0  fb4a					      include	"dat/title-copy.sp"
       1  fb4a				   TitleCopy
       2  fb4a				   TitleCopy0
-      3  fb4a		       0f		      dc.b	%00001111
-      4  fb4b		       10		      dc.b	%00010000
-      5  fb4c		       16		      dc.b	%00010110
-      6  fb4d		       14		      dc.b	%00010100
-      7  fb4e		       16		      dc.b	%00010110
-      8  fb4f		       10		      dc.b	%00010000
-      9  fb50		       0f		      dc.b	%00001111
+      3  fb4a		       00		      dc.b	%00000000
+      4  fb4b		       01		      dc.b	%00000001
+      5  fb4c		       01		      dc.b	%00000001
+      6  fb4d		       01		      dc.b	%00000001
+      7  fb4e		       01		      dc.b	%00000001
+      8  fb4f		       01		      dc.b	%00000001
+      9  fb50		       00		      dc.b	%00000000
      10  fb51				   TitleCopy1
-     11  fb51		       00		      dc.b	%00000000
-     12  fb52		       b7		      dc.b	%10110111
-     13  fb53		       a5		      dc.b	%10100101
-     14  fb54		       95		      dc.b	%10010101
-     15  fb55		       b7		      dc.b	%10110111
-     16  fb56		       80		      dc.b	%10000000
-     17  fb57		       00		      dc.b	%00000000
+     11  fb51		       f0		      dc.b	%11110000
+     12  fb52		       0b		      dc.b	%00001011
+     13  fb53		       6a		      dc.b	%01101010
+     14  fb54		       49		      dc.b	%01001001
+     15  fb55		       6b		      dc.b	%01101011
+     16  fb56		       08		      dc.b	%00001000
+     17  fb57		       f0		      dc.b	%11110000
      18  fb58				   TitleCopy2
      19  fb58		       00		      dc.b	%00000000
-     20  fb59		       6e		      dc.b	%01101110
-     21  fb5a		       4a		      dc.b	%01001010
-     22  fb5b		       2a		      dc.b	%00101010
-     23  fb5c		       6e		      dc.b	%01101110
+     20  fb59		       76		      dc.b	%01110110
+     21  fb5a		       54		      dc.b	%01010100
+     22  fb5b		       52		      dc.b	%01010010
+     23  fb5c		       76		      dc.b	%01110110
      24  fb5d		       00		      dc.b	%00000000
      25  fb5e		       00		      dc.b	%00000000
-     26  fb5e				   TitleCopy3 SET	BlankGfx
-     27  fb5e				   TitleCopy4 SET	BlankGfx
-     28  fb5e				   TitleCopy5 SET	BlankGfx
+     26  fb5f				   TitleCopy3
+     27  fb5f		       00		      dc.b	%00000000
+     28  fb60		       e1		      dc.b	%11100001
+     29  fb61		       a1		      dc.b	%10100001
+     30  fb62		       a1		      dc.b	%10100001
+     31  fb63		       e1		      dc.b	%11100001
+     32  fb64		       00		      dc.b	%00000000
+     33  fb65		       00		      dc.b	%00000000
+     34  fb66				   TitleCopy4
+     35  fb66		       00		      dc.b	%00000000
+     36  fb67		       d7		      dc.b	%11010111
+     37  fb68		       52		      dc.b	%01010010
+     38  fb69		       42		      dc.b	%01000010
+     39  fb6a		       c6		      dc.b	%11000110
+     40  fb6b		       00		      dc.b	%00000000
+     41  fb6c		       00		      dc.b	%00000000
+     42  fb6c				   TitleCopy5 SET	BlankGfx
 ------- FILE proton.asm
 ------- FILE dat/title-name.sp LEVEL 2 PASS 2
-      0  fb5f					      include	"dat/title-name.sp"
-      1  fb5f				   TitleName
-      2  fb5f				   TitleName0
-      3  fb5f		       dd		      dc.b	%11011101
-      4  fb60		       95		      dc.b	%10010101
-      5  fb61		       dd		      dc.b	%11011101
-      6  fb62		       85		      dc.b	%10000101
-      7  fb63		       c4		      dc.b	%11000100
-      8  fb64				   TitleName1
-      9  fb64		       f5		      dc.b	%11110101
-     10  fb65		       57		      dc.b	%01010111
-     11  fb66		       55		      dc.b	%01010101
-     12  fb67		       12		      dc.b	%00010010
-     13  fb68		       00		      dc.b	%00000000
-     14  fb69				   TitleName2
-     15  fb69		       4e		      dc.b	%01001110
-     16  fb6a		       4a		      dc.b	%01001010
-     17  fb6b		       4e		      dc.b	%01001110
-     18  fb6c		       62		      dc.b	%01100010
-     19  fb6d		       02		      dc.b	%00000010
-     20  fb6e				   TitleName3
-     21  fb6e		       ea		      dc.b	%11101010
-     22  fb6f		       aa		      dc.b	%10101010
-     23  fb70		       aa		      dc.b	%10101010
-     24  fb71		       82		      dc.b	%10000010
-     25  fb72		       ea		      dc.b	%11101010
-     26  fb73				   TitleName4
-     27  fb73		       ab		      dc.b	%10101011
-     28  fb74		       aa		      dc.b	%10101010
-     29  fb75		       aa		      dc.b	%10101010
-     30  fb76		       fb		      dc.b	%11111011
-     31  fb77		       00		      dc.b	%00000000
-     32  fb78				   TitleName5
-     33  fb78		       ba		      dc.b	%10111010
-     34  fb79		       aa		      dc.b	%10101010
-     35  fb7a		       aa		      dc.b	%10101010
-     36  fb7b		       ab		      dc.b	%10101011
-     37  fb7c		       00		      dc.b	%00000000
+      0  fb6d					      include	"dat/title-name.sp"
+      1  fb6d				   TitleName
+      2  fb6d				   TitleName0
+      3  fb6d		       dd		      dc.b	%11011101
+      4  fb6e		       95		      dc.b	%10010101
+      5  fb6f		       dd		      dc.b	%11011101
+      6  fb70		       85		      dc.b	%10000101
+      7  fb71		       c4		      dc.b	%11000100
+      8  fb72				   TitleName1
+      9  fb72		       f5		      dc.b	%11110101
+     10  fb73		       57		      dc.b	%01010111
+     11  fb74		       55		      dc.b	%01010101
+     12  fb75		       12		      dc.b	%00010010
+     13  fb76		       00		      dc.b	%00000000
+     14  fb77				   TitleName2
+     15  fb77		       4e		      dc.b	%01001110
+     16  fb78		       4a		      dc.b	%01001010
+     17  fb79		       4e		      dc.b	%01001110
+     18  fb7a		       62		      dc.b	%01100010
+     19  fb7b		       02		      dc.b	%00000010
+     20  fb7c				   TitleName3
+     21  fb7c		       ea		      dc.b	%11101010
+     22  fb7d		       aa		      dc.b	%10101010
+     23  fb7e		       aa		      dc.b	%10101010
+     24  fb7f		       82		      dc.b	%10000010
+     25  fb80		       ea		      dc.b	%11101010
+     26  fb81				   TitleName4
+     27  fb81		       ab		      dc.b	%10101011
+     28  fb82		       aa		      dc.b	%10101010
+     29  fb83		       aa		      dc.b	%10101010
+     30  fb84		       fb		      dc.b	%11111011
+     31  fb85		       00		      dc.b	%00000000
+     32  fb86				   TitleName5
+     33  fb86		       ba		      dc.b	%10111010
+     34  fb87		       aa		      dc.b	%10101010
+     35  fb88		       aa		      dc.b	%10101010
+     36  fb89		       ab		      dc.b	%10101011
+     37  fb8a		       00		      dc.b	%00000000
 ------- FILE proton.asm
-   1543  fb7d
-   1544  fb7d				   LaserGfx0
-   1545  fb7d		       00		      dc.b	%00000000
-   1546  fb7e		       82		      dc.b	%10000010
-   1547  fb7f		       54		      dc.b	%01010100
-   1548  fb80		       28		      dc.b	%00101000
-   1549  fb81		       fe		      dc.b	%11111110
-   1550  fb82		       28		      dc.b	%00101000
-   1551  fb83		       54		      dc.b	%01010100
-   1552  fb84		       82		      dc.b	%10000010
-   1553  fb85				   LaserGfx1
-   1554  fb85		       00		      dc.b	%00000000
-   1555  fb86		       10		      dc.b	%00010000
-   1556  fb87		       54		      dc.b	%01010100
-   1557  fb88		       28		      dc.b	%00101000
-   1558  fb89		       38		      dc.b	%00111000
-   1559  fb8a		       28		      dc.b	%00101000
-   1560  fb8b		       54		      dc.b	%01010100
-   1561  fb8c		       10		      dc.b	%00010000
-   1562  fb8d
+   1543  fb8b
+   1544  fb8b				   LaserGfx0
+   1545  fb8b		       00		      dc.b	%00000000
+   1546  fb8c		       82		      dc.b	%10000010
+   1547  fb8d		       54		      dc.b	%01010100
+   1548  fb8e		       28		      dc.b	%00101000
+   1549  fb8f		       fe		      dc.b	%11111110
+   1550  fb90		       28		      dc.b	%00101000
+   1551  fb91		       54		      dc.b	%01010100
+   1552  fb92		       82		      dc.b	%10000010
+   1553  fb93				   LaserGfx1
+   1554  fb93		       00		      dc.b	%00000000
+   1555  fb94		       10		      dc.b	%00010000
+   1556  fb95		       54		      dc.b	%01010100
+   1557  fb96		       28		      dc.b	%00101000
+   1558  fb97		       38		      dc.b	%00111000
+   1559  fb98		       28		      dc.b	%00101000
+   1560  fb99		       54		      dc.b	%01010100
+   1561  fb9a		       10		      dc.b	%00010000
+   1562  fb9b
    1563  fc00					      ORG	ORG_ADDR + $c00
    1564  fc00				   GFX_BEGIN  SET	*
    1565  fc00
@@ -3097,61 +3111,85 @@
    1961  ffa4		       60		      rts
    1962  ffa5
    1963  ffa5				   SetTitleCopy SUBROUTINE
-   1964  ffa5							; set up graphics for title name
-   1965  ffa5		       a9 4a		      lda	#<TitleCopy0
-   1966  ffa7		       85 85		      sta	SpritePtrs+2
-   1967  ffa9		       a9 51		      lda	#<TitleCopy1
-   1968  ffab		       85 87		      sta	SpritePtrs+4
-   1969  ffad		       a9 58		      lda	#<TitleCopy2
-   1970  ffaf		       85 89		      sta	SpritePtrs+6
-   1971  ffb1
-   1972  ffb1		       a9 fb		      lda	#>TitleCopy
-   1973  ffb3		       85 86		      sta	SpritePtrs+3
-   1974  ffb5		       85 88		      sta	SpritePtrs+5
-   1975  ffb7		       85 8a		      sta	SpritePtrs+7
-   1976  ffb9
-   1977  ffb9		       a9 00		      lda	#<BlankGfx
-   1978  ffbb		       85 83		      sta	SpritePtrs
-   1979  ffbd		       85 8b		      sta	SpritePtrs+8
-   1980  ffbf		       85 8d		      sta	SpritePtrs+10
-   1981  ffc1		       a9 fc		      lda	#>BlankGfx
-   1982  ffc3		       85 84		      sta	SpritePtrs+1
-   1983  ffc5		       85 8c		      sta	SpritePtrs+9
-   1984  ffc7		       85 8e		      sta	SpritePtrs+11
-   1985  ffc9		       60		      rts
-   1986  ffca
-   1987  ffca				   SetTitleName SUBROUTINE
-   1988  ffca							; set up graphics for title name
-   1989  ffca		       a9 5f		      lda	#<TitleName0
-   1990  ffcc		       85 83		      sta	SpritePtrs
-   1991  ffce		       a9 64		      lda	#<TitleName1
-   1992  ffd0		       85 85		      sta	SpritePtrs+2
-   1993  ffd2		       a9 69		      lda	#<TitleName2
-   1994  ffd4		       85 87		      sta	SpritePtrs+4
-   1995  ffd6		       a9 6e		      lda	#<TitleName3
-   1996  ffd8		       85 89		      sta	SpritePtrs+6
-   1997  ffda		       a9 73		      lda	#<TitleName4
-   1998  ffdc		       85 8b		      sta	SpritePtrs+8
-   1999  ffde		       a9 78		      lda	#<TitleName5
-   2000  ffe0		       85 8d		      sta	SpritePtrs+10
-   2001  ffe2
-   2002  ffe2		       a9 fb		      lda	#>TitleName
-   2003  ffe4		       85 84		      sta	SpritePtrs+1
-   2004  ffe6		       85 86		      sta	SpritePtrs+3
-   2005  ffe8		       85 88		      sta	SpritePtrs+5
-   2006  ffea		       85 8a		      sta	SpritePtrs+7
-   2007  ffec		       85 8c		      sta	SpritePtrs+9
-   2008  ffee		       85 8e		      sta	SpritePtrs+11
-   2009  fff0		       60		      rts
-   2010  fff1
- Page $ff00 has 9 bytes remaining
-   2011  fff1					      ECHO	"Page", (*&$ff00), "has", ($fffa - *)d, "bytes remaining"
-   2012  fff1
-   2013  fff1							; -----------------------------------------------------------------------------
-   2014  fff1							; Interrupts
-   2015  fff1							; -----------------------------------------------------------------------------
-   2016  fffa					      ORG	ORG_ADDR + $ffa
-   2017  fffa				   Interrupts
-   2018  fffa		       00 f0		      dc.w	Reset	; NMI
-   2019  fffc		       00 f0		      dc.w	Reset	; RESET
-   2020  fffe		       00 f0		      dc.w	Reset	; IRQ
+   1964  ffa5		       a9 4a		      lda	#<TitleCopy0
+   1965  ffa7		       85 83		      sta	SpritePtrs
+   1966  ffa9		       a9 51		      lda	#<TitleCopy1
+   1967  ffab		       85 85		      sta	SpritePtrs+2
+   1968  ffad		       a9 58		      lda	#<TitleCopy2
+   1969  ffaf		       85 87		      sta	SpritePtrs+4
+   1970  ffb1		       a9 5f		      lda	#<TitleCopy3
+   1971  ffb3		       85 89		      sta	SpritePtrs+6
+   1972  ffb5		       a9 66		      lda	#<TitleCopy4
+   1973  ffb7		       85 8b		      sta	SpritePtrs+8
+   1974  ffb9
+   1975  ffb9		       a9 fb		      lda	#>TitleCopy
+   1976  ffbb		       85 84		      sta	SpritePtrs+1
+   1977  ffbd		       85 86		      sta	SpritePtrs+3
+   1978  ffbf		       85 88		      sta	SpritePtrs+5
+   1979  ffc1		       85 8a		      sta	SpritePtrs+7
+   1980  ffc3		       85 8c		      sta	SpritePtrs+9
+   1981  ffc5
+   1982  ffc5		       a9 00		      lda	#<BlankGfx
+   1983  ffc7		       85 8d		      sta	SpritePtrs+10
+   1984  ffc9		       a9 fc		      lda	#>BlankGfx
+   1985  ffcb		       85 8e		      sta	SpritePtrs+11
+   1986  ffcd
+   1987  ffcd				  -	      if	0
+   1988  ffcd				  -	      lda	#<TitleCopy0
+   1989  ffcd				  -	      sta	SpritePtrs+2
+   1990  ffcd				  -	      lda	#<TitleCopy1
+   1991  ffcd				  -	      sta	SpritePtrs+4
+   1992  ffcd				  -	      lda	#<TitleCopy2
+   1993  ffcd				  -	      sta	SpritePtrs+6
+   1994  ffcd				  -
+   1995  ffcd				  -	      lda	#>TitleCopy
+   1996  ffcd				  -	      sta	SpritePtrs+3
+   1997  ffcd				  -	      sta	SpritePtrs+5
+   1998  ffcd				  -	      sta	SpritePtrs+7
+   1999  ffcd				  -
+   2000  ffcd				  -	      lda	#<BlankGfx
+   2001  ffcd				  -	      sta	SpritePtrs
+   2002  ffcd				  -	      sta	SpritePtrs+8
+   2003  ffcd				  -	      sta	SpritePtrs+10
+   2004  ffcd				  -	      lda	#>BlankGfx
+   2005  ffcd				  -	      sta	SpritePtrs+1
+   2006  ffcd				  -	      sta	SpritePtrs+9
+   2007  ffcd				  -	      sta	SpritePtrs+11
+   2008  ffcd					      endif
+   2009  ffcd		       60		      rts
+   2010  ffce
+   2011  ffce				   SetTitleName SUBROUTINE
+   2012  ffce							; set up graphics for title name
+   2013  ffce		       a9 6d		      lda	#<TitleName0
+   2014  ffd0		       85 83		      sta	SpritePtrs
+   2015  ffd2		       a9 72		      lda	#<TitleName1
+   2016  ffd4		       85 85		      sta	SpritePtrs+2
+   2017  ffd6		       a9 77		      lda	#<TitleName2
+   2018  ffd8		       85 87		      sta	SpritePtrs+4
+   2019  ffda		       a9 7c		      lda	#<TitleName3
+   2020  ffdc		       85 89		      sta	SpritePtrs+6
+   2021  ffde		       a9 81		      lda	#<TitleName4
+   2022  ffe0		       85 8b		      sta	SpritePtrs+8
+   2023  ffe2		       a9 86		      lda	#<TitleName5
+   2024  ffe4		       85 8d		      sta	SpritePtrs+10
+   2025  ffe6
+   2026  ffe6		       a9 fb		      lda	#>TitleName
+   2027  ffe8		       85 84		      sta	SpritePtrs+1
+   2028  ffea		       85 86		      sta	SpritePtrs+3
+   2029  ffec		       85 88		      sta	SpritePtrs+5
+   2030  ffee		       85 8a		      sta	SpritePtrs+7
+   2031  fff0		       85 8c		      sta	SpritePtrs+9
+   2032  fff2		       85 8e		      sta	SpritePtrs+11
+   2033  fff4		       60		      rts
+   2034  fff5
+ Page $ff00 has 5 bytes remaining
+   2035  fff5					      ECHO	"Page", (*&$ff00), "has", ($fffa - *)d, "bytes remaining"
+   2036  fff5
+   2037  fff5							; -----------------------------------------------------------------------------
+   2038  fff5							; Interrupts
+   2039  fff5							; -----------------------------------------------------------------------------
+   2040  fffa					      ORG	ORG_ADDR + $ffa
+   2041  fffa				   Interrupts
+   2042  fffa		       00 f0		      dc.w	Reset	; NMI
+   2043  fffc		       00 f0		      dc.w	Reset	; RESET
+   2044  fffe		       00 f0		      dc.w	Reset	; IRQ
