@@ -21,7 +21,7 @@ COLOR_GREEN         = $c2
 COLOR_LGREEN        = $c6
 COLOR_DGRAY         = $02
 COLOR_GRAY          = $06
-COLOR_LGRAY         = $0a
+COLOR_LGRAY         = $08
 COLOR_RED           = $42
 COLOR_YELLOW        = $1c
 

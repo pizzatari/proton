@@ -17,26 +17,26 @@
 18.Loop                  f20a              (R )
 19.Return                f21d              (R )
 2.Loop                   f00c              (R )
-21.Continue              f27c              (R )
-22.Loop                  f286              (R )
+21.Continue              f28f              (R )
+22.Loop                  f299              (R )
 24.CYCLES                0004              (R )
-25.Delay                 f2f7              (R )
-25.SkipDec               f2e9              (R )
-26.Loop                  f2f7              (R )
-27.CheckDown             f33c              (R )
-27.CheckFire             f37c              (R )
-27.CheckLeft             f328              (R )
-27.CheckMovement         f35c              (R )
-27.CheckRight            f311                  
-27.CheckUp               f34c              (R )
-27.Dec1                  f31f              (R )
-27.Dec2                  f333              (R )
-27.Joystick              f307              (R )
-27.Pos                   f377              (R )
-27.Return                f388              (R )
-28.Row                   f406              (R )
-29.Row                   f43d              (R )
-30.Row                   f486              (R )
+25.Delay                 f30a              (R )
+25.SkipDec               f2fc              (R )
+26.Loop                  f30a              (R )
+27.CheckDown             f34f              (R )
+27.CheckFire             f38f              (R )
+27.CheckLeft             f33b              (R )
+27.CheckMovement         f36f              (R )
+27.CheckRight            f324                  
+27.CheckUp               f35f              (R )
+27.Dec1                  f332              (R )
+27.Dec2                  f346              (R )
+27.Joystick              f31a              (R )
+27.Pos                   f38a              (R )
+27.Return                f39b              (R )
+28.Row                   f405              (R )
+29.Row                   f446              (R )
+30.Row                   f48c              (R )
 34.Loop                  f587              (R )
 34.Pop                   f593              (R )
 34.Return                f5a4              (R )
@@ -106,6 +106,7 @@ BUILDING_OBJ             0001              (R )
 Buildings                fcd0              (R )
 COLOR_BG                 00c0              (R )
 COLOR_BLACK              0000                  
+COLOR_BUILDING           0008              (R )
 COLOR_DGRAY              0002                  
 COLOR_DGREEN             00c0                  
 COLOR_FG                 00c2              (R )
@@ -113,7 +114,7 @@ COLOR_GRAY               0006
 COLOR_GREEN              00c2                  
 COLOR_HUD_SCORE          000e                  
 COLOR_LASER              0042              (R )
-COLOR_LGRAY              000a                  
+COLOR_LGRAY              0008                  
 COLOR_LGREEN             00c6                  
 COLOR_RED                0042                  
 COLOR_WHITE              000e                  
@@ -161,6 +162,7 @@ EngineVolume             fd0f              (R )
 ExpanderRowKernel        f400              (R )
 EXPLOSION_HEIGHT         0010                  
 ExplosionGfx             fc30              (R )
+F                        f6ed                  
 FIGHTER_HEIGHT           0010                  
 FighterGfx               fc20              (R )
 FPOINT_SCALE             0001              (R )
@@ -170,9 +172,9 @@ FRICTION_X               0001              (R )
 FUEL_HEIGHT              0010                  
 FuelGfx                  fc60              (R )
 GameInit                 f21e              (R )
-GameIO                   f2fd              (R )
-GameKernel               f290              (R )
-GameOverscan             f2d2              (R )
+GameIO                   f310              (R )
+GameKernel               f2a3              (R )
+GameOverscan             f2e5              (R )
 GameVertBlank            f22f              (R )
 GFX_BEGIN                fc00              (R )
 GRP0                     001b              (R )
@@ -186,7 +188,7 @@ HMP0                     0020              (R )
 HMP1                     0021              (R )
 HorizPosition            f6c5              (R )
 HorizPositionBG          f6d7              (R )
-HorizPositionPF          f6ed              (R )
+HorizPositionPF          f6ed                  
 HUDHeight                00db                  
 HUDKernel                f500              (R )
 HUDPalette               fd0c              (R )
@@ -273,7 +275,7 @@ RESMP0                   0028
 RESMP1                   0029                  
 RESP0                    0010              (R )
 RESP1                    0011                  
-RowKernel                f415              (R )
+RowKernel                f421              (R )
 RSYNC                    0003                  
 Score                    0091              (R )
 SCREEN_HEIGHT            00c0                  
@@ -288,7 +290,7 @@ ShipGfx                  fc00              (R )
 ShipPalette0             fcec              (R )
 ShipPalette1             fcfc                  
 ShipUpdatePosition       f67b              (R )
-ShrinkerRowKernel        f45e              (R )
+ShrinkerRowKernel        f467              (R )
 SpawnBottom              f7d6              (R )
 SpawnBuildings           f583              (R )
 SpawnEnemies             f5a5              (R )

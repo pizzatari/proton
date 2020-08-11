@@ -38,6 +38,7 @@ int main(int argc, char *argv[]) {
     int bytes = 16;
     int cnt = 1;
     int val;
+    int first = 0;
 
     if (argc >= 2)
         bytes = atoi(argv[1]);
@@ -51,7 +52,13 @@ int main(int argc, char *argv[]) {
         /* this incorporates a bit twiddling hack for reversing bits */
         val = (((cnt * 0x0802 & 0x22110) | (cnt * 0x8020 & 0x88440)) * 0x10101>>16) * ~cnt / 7;
 
+        if (cnt == 1)
+            first = val;
+
         if (cnt % num_per_line == 0) {
+            /* the last byte needs to repeat the first byte */
+            if (cnt == bytes)
+                val = first;
             printf("$%.2x" EOL_RECORD, val & precision);
             if (cnt < bytes)
                 printf("    dc.b ");
