@@ -495,7 +495,7 @@ GameInit SUBROUTINE
     jsr InitScreen
     jsr InitPlayer
     jsr SpawnBuildings
-    jsr SpawnEnemies
+    ;jsr SpawnEnemies
     lda #30
     sta Delay
     rts
@@ -1410,14 +1410,9 @@ SpawnSprite SUBROUTINE
     sec
     sbc #PF_ROW_HEIGHT
     sta ScreenPosY
-<<<<<<< Updated upstream
-
-    jsr SpawnTop
-=======
     jsr SpritesShiftDown
     jsr SpawnInTop
     ldy #MAX_ROWS-1
->>>>>>> Stashed changes
     jmp .Return
 
 .Reverse
@@ -1427,19 +1422,14 @@ SpawnSprite SUBROUTINE
     clc
     adc #PF_ROW_HEIGHT
     sta ScreenPosY
-<<<<<<< Updated upstream
-    
-    jsr SpawnBottom
-=======
     jsr SpritesShiftUp
     jsr SpawnInBottom
     ldy #0
->>>>>>> Stashed changes
 
 .Return
     rts
 
-SpawnTop SUBROUTINE
+SpritesShiftDown SUBROUTINE
     ; shift rows down
     ldy #1
 .ShiftDown
@@ -1464,50 +1454,9 @@ SpawnTop SUBROUTINE
     iny
     cpy #MAX_ROWS-1
     bne .ShiftDown
-<<<<<<< Updated upstream
-
-    ; load blank
-    lda #<BlankGfx
-    sta Sprites0+MAX_ROWS-1
-    sta Sprites1+MAX_ROWS-1
-    lda #0
-    sta SpeedX0+MAX_ROWS-1
-    sta SpeedX1+MAX_ROWS-1
-    sta PosX0+MAX_ROWS-1
-    sta PosX1+MAX_ROWS-1
-
-    ; spawn replacements
-    lda FrameCtr
-    and #$0f
-    cmp #8
-    bcs .Blank1
-    lda #<FighterGfx
-    sta Sprites0+MAX_ROWS-1
-    lda ScreenPosY
-    asl
-    adc #50
-    sta PosX0+MAX_ROWS-1
-    lda #1
-    sta SpeedX0+MAX_ROWS-1
-.Blank1
-
-    lda FrameCtr
-    eor INTIM
-    and #3
-    tax
-    lda Buildings,x
-    sta Sprites1+MAX_ROWS-1
-    bcc .Blank2
-    lda FrameCtr
-    and #%00011111
-    adc #90
-    sta PosX1+MAX_ROWS-1
-.Blank2
-=======
->>>>>>> Stashed changes
     rts
 
-SpawnBottom SUBROUTINE
+SpritesShiftUp SUBROUTINE
     ; shift rows up
     ldy #MAX_ROWS-1
 .ShiftUp
@@ -1527,32 +1476,6 @@ SpawnBottom SUBROUTINE
     dey
     cpy #1
     bne .ShiftUp
-<<<<<<< Updated upstream
-
-    lda #<BlankGfx
-    sta Sprites0+1
-    sta Sprites1+1
-    lda #0
-    sta SpeedX0+1
-    sta SpeedX1+1
-    sta PosX0+1
-    sta PosX1+1
-
-    ; spawn replacements
-    lda FrameCtr
-    and #$0f
-    cmp #8
-    bcs .Blank1
-    lda #<FighterGfx
-    sta Sprites0+1
-    lda ScreenPosY
-    asl
-    adc #75
-    sta PosX0+1
-    lda #1
-    sta SpeedX0+1
-.Blank1
-=======
     rts
 
 SpawnInTop SUBROUTINE
@@ -1582,22 +1505,7 @@ SpawnInBottom SUBROUTINE
     lda #<CondoGfx
     sta Sprites1
     rts
->>>>>>> Stashed changes
 
-    lda FrameCtr
-    eor INTIM
-    and #3
-    tax
-    lda Buildings,x
-    sta Sprites1+1
-    beq .Blank2
-    lda FrameCtr
-    and #%00011111
-    adc #90
-    sta PosX1+1
-.Blank2
-
-    rts
 ; -----------------------------------------------------------------------------
 ; Data
 ; -----------------------------------------------------------------------------
