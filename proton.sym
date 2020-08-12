@@ -67,7 +67,7 @@
 46.Return                f76d              (R )
 46.Reverse               f75e              (R )
 47.ShiftDown             f770              (R )
-48.ShiftUp               f7aa              (R )
+48.ShiftUp               f79c              (R )
 5.PROC                   fd3a              (R )
 5.Return                 f044              (R )
 50.Begin                 fc10              (R )
@@ -292,8 +292,8 @@ ShipUpdatePosition       f677              (R )
 ShrinkerRowKernel        f467              (R )
 SpawnBuildings           f57f                  
 SpawnEnemies             f5a1                  
-SpawnInBottom            f7e5              (R )
-SpawnInTop               f7e0              (R )
+SpawnInBottom            f7d8              (R )
+SpawnInTop               f7c4              (R )
 SpawnSprite              f744              (R )
 SpeedX0                  00ae              (R )
 SpeedX1                  00b9              (R )
@@ -302,7 +302,7 @@ SpritePtrsClear          f667              (R )
 Sprites0                 0098              (R )
 Sprites1                 00a3              (R )
 SpritesShiftDown         f76e              (R )
-SpritesShiftUp           f7a8              (R )
+SpritesShiftUp           f79a              (R )
 SWACNT                   0281                  
 SWBCNT                   0283                  
 SWCHA                    0280              (R )
