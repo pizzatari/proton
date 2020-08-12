@@ -91,11 +91,15 @@ M0_OBJ              = 2
 M1_OBJ              = 3
 BL_OBJ              = 4
 
-PLAYER_ROW          = 0         ; Sprites0[0]
 PLAYER_OBJ          = P0_OBJ
 ENEMY_OBJ           = P0_OBJ
 BUILDING_OBJ        = P1_OBJ
 MISSILE_OBJ         = M0_OBJ
+
+TYPE_ENEMY          = 0
+TYPE_BUILDING       = 1
+TYPE_ACTION         = 2
+
 
 ; -----------------------------------------------------------------------------
 ; Variables
@@ -103,34 +107,37 @@ MISSILE_OBJ         = M0_OBJ
     SEG.U ram
     ORG $80
 
+; Global vars
 FrameCtr        ds.b 1
 Mode            ds.b 1
 Delay           ds.b 1
-SpritePtrs      ds.w MAX_NUM_PTRS
 Ptr             ds.w 1
-
 Temp            = Ptr
 Temp2           = Ptr+1
-
+SpritePtrs      ds.w MAX_NUM_PTRS
+GfxPtr0         = SpritePtrs
+GfxPtr1         = SpritePtrs+2
 MemEnd
 
     ORG MemEnd
-; TitleVars
+; Title vars
 LaserPtr        ds.w 1
 
     ORG MemEnd
-; GameVars 
+; Game vars 
 Score           ds.b 3                      ; BCD in MSB order
 
 ; screen motion
 ScreenPosY      ds.b 1
 ScreenSpeedY    ds.b 1
 
-; sprite type/graphics (GRP0/GRP1)
+; player ship motion
+PlyrSpeedX      ds.b 1
+PlyrPosX        ds.b 1
+
+; sprite data (GRP0/GRP1)
 Sprites0        ds.b MAX_ROWS        ; gfx low byte = sprite type
 Sprites1        ds.b MAX_ROWS        ; gfx low byte = sprite type
-
-; sprite motion (GRP0/GRP1)
 SpeedX0         ds.b MAX_ROWS
 SpeedX1         ds.b MAX_ROWS
 PosX0           ds.b MAX_ROWS
@@ -139,13 +146,9 @@ PosX1           ds.b MAX_ROWS
 JoyFire         ds.b 1
 LaserAudioFrame ds.b 1
 
-; graphics data
-
 LocalVars       ds.b 14
-
 EndLine         = LocalVars+1
 PlyrIdx         = LocalVars+2
-
 HUDHeight       = LocalVars+1
 
     ECHO "RAM used =", (* - $80)d, "bytes"
@@ -215,10 +218,6 @@ VerticalSync SUBROUTINE
 TitleVertBlank SUBROUTINE
     lda #LINES_VBLANK*76/64
     sta TIM64T
-
-    ;ldx #P0_OBJ
-    ;lda #150
-    ;jsr HorizPosition
 
     lda #COLOR_WHITE
     sta COLUP0
@@ -494,8 +493,9 @@ TitleIO SUBROUTINE
 GameInit SUBROUTINE
     jsr InitScreen
     jsr InitPlayer
-    jsr SpawnBuildings
-    jsr SpawnEnemies
+    jsr SpritePtrsClear
+    ;jsr SpawnBuildings
+    ;jsr SpawnEnemies
     lda #30
     sta Delay
     rts
@@ -520,9 +520,6 @@ GameVertBlank SUBROUTINE
     ; spawn single row sprite on motion
     jsr SpawnSprite
 
-    ; clear sprite pointers
-    jsr SpritePtrsClear
-
     ; position 3 medium
     lda #3
     sta NUSIZ1
@@ -535,23 +532,12 @@ GameVertBlank SUBROUTINE
     lda #76
     jsr HorizPosition
     ldx #MISSILE_OBJ
-    lda PosX0+PLAYER_ROW
+    lda PlyrPosX
     clc
     adc #4          ; adjust offset
     jsr HorizPosition
     sta WSYNC
     sta HMOVE
-
-    ; setup sprite graphics pointer
-    lda Sprites0+MAX_ROWS-1
-    sta SpritePtrs
-    lda Sprites1+MAX_ROWS-1
-    sta SpritePtrs+2
-
-    lda #COLOR_LASER
-    sta COLUP0+PLAYER_OBJ
-    lda #COLOR_BUILDING
-    sta COLUP0+BUILDING_OBJ
 
     ; enable/disable laser
     lda Delay
@@ -562,6 +548,17 @@ GameVertBlank SUBROUTINE
     stx LaserAudioFrame
     jsr LaserCollision
 .Continue
+
+    ; setup top row sprite graphics
+    lda Sprites0+MAX_ROWS-1
+    sta GfxPtr0
+    lda Sprites1+MAX_ROWS-1
+    sta GfxPtr1
+
+    lda #COLOR_LASER
+    sta COLUP0
+    lda #COLOR_BUILDING
+    sta COLUP1
 
     ; clear fine motion for subsequent HMOVEs
     lda #0
@@ -630,7 +627,6 @@ GameOverscan SUBROUTINE
     jsr ShipUpdatePosition
     jsr EnemiesUpdatePosition
     jsr PlayAudio
-    ;jsr SpawnEnemies
 
 .Delay
     TIMER_WAIT
@@ -657,7 +653,7 @@ GameIO SUBROUTINE
     tya
     and #JOY0_RIGHT
     bne .CheckLeft
-    lda SpeedX0+PLAYER_ROW
+    lda PlyrSpeedX
     bpl .Dec1           ; instant decceleration on change of direction
     lda #0
 .Dec1
@@ -665,13 +661,13 @@ GameIO SUBROUTINE
     adc #ACCEL_X
     cmp #MAX_SPEED_X+1
     bpl .CheckLeft
-    sta SpeedX0+PLAYER_ROW
+    sta PlyrSpeedX
 
 .CheckLeft
     tya
     and #JOY0_LEFT
     bne .CheckDown
-    lda SpeedX0+PLAYER_ROW
+    lda PlyrSpeedX
     bmi .Dec2           ; instant decceleration on change of direction
     lda #0
 .Dec2
@@ -679,7 +675,7 @@ GameIO SUBROUTINE
     sbc #ACCEL_X
     cmp #MIN_SPEED_X
     bmi .CheckDown
-    sta SpeedX0+PLAYER_ROW
+    sta PlyrSpeedX
 
 .CheckDown
     tya
@@ -716,17 +712,17 @@ GameIO SUBROUTINE
     and #JOY0_LEFT | JOY0_RIGHT
     cmp #JOY0_LEFT | JOY0_RIGHT
     bne .CheckFire
-    lda SpeedX0+PLAYER_ROW
+    lda PlyrSpeedX
     beq .CheckFire
     bpl .Pos
     clc
     adc #FRICTION_X
-    sta SpeedX0+PLAYER_ROW
+    sta PlyrSpeedX
     jmp .CheckFire
 .Pos
     sec
     sbc #FRICTION_X
-    sta SpeedX0+PLAYER_ROW
+    sta PlyrSpeedX
 
 .CheckFire
     lda INPT4
@@ -743,47 +739,42 @@ GameIO SUBROUTINE
 
     ALIGN 256
 KERNEL_BEGIN SET *
-
-#if 1
 ExpanderRowKernel SUBROUTINE
     lda ScreenPosY
     and #PF_ROW_HEIGHT-1
     tay
-    ;iny
 .Row
-    ldx PFPattern,y               ; 4 (37)
+    ldx PFPattern,y                 ; 4 (37)
     lda ShipPalette0,y              ; 4 (41)
     sta WSYNC
 
-    sta COLUP0+ENEMY_OBJ            ; 3 (3)
-    lda (SpritePtrs),y              ; 5 (8)
-    sta GRP0+ENEMY_OBJ              ; 3 (11)
-    lda (SpritePtrs+2),y            ; 5 (16)
-    sta GRP0+BUILDING_OBJ           ; 3 (19)
+    sta COLUP0                      ; 3 (3)
+    lda (GfxPtr0),y                 ; 5 (8)
+    sta GRP0                        ; 3 (11)
+    lda (GfxPtr1),y                 ; 5 (16)
+    sta GRP1                        ; 3 (19)
     stx PF0                         ; 3 (22)
     stx PF1                         ; 3 (25)
     stx PF2                         ; 3 (28)
 
     dey                             ; 2 (30)
-    ;bne .Row                        ; 2 (32)
     bpl .Row                        ; 2 (32)
     rts                             ; 6 (38)
-#else
-ExpanderRowKernel SUBROUTINE
-    lda ScreenPosY
-    and #PF_ROW_HEIGHT-1
-    tay
-    iny
-.Row
-    lda PFPattern-1,y               ; 4 (17)
-    sta WSYNC
-    sta PF0                         ; 3 (3)
-    sta PF1                         ; 3 (6)
-    sta PF2                         ; 3 (9)
-    dey                             ; 2 (11)
-    bne .Row                        ; 2 (13)
-    rts                             ; 6 (19)
-#endif
+
+;ExpanderRowKernel SUBROUTINE
+;    lda ScreenPosY
+;    and #PF_ROW_HEIGHT-1
+;    tay
+;    iny
+;.Row
+;    lda PFPattern-1,y               ; 4 (17)
+;    sta WSYNC
+;    sta PF0                         ; 3 (3)
+;    sta PF1                         ; 3 (6)
+;    sta PF2                         ; 3 (9)
+;    dey                             ; 2 (11)
+;    bne .Row                        ; 2 (13)
+;    rts                             ; 6 (19)
 
 RowKernel SUBROUTINE
     tya                             ; 2 (2)
@@ -792,10 +783,8 @@ RowKernel SUBROUTINE
     ; Two lines of the playfield need to be written out during
     ; the horizontal positioning.
 
-    ldx #ENEMY_OBJ                  ; 2 (7)
+    ldx #0                          ; 2 (7)
     lda PosX0,y                     ; 4 (11)
-    ;ldy PFPattern+PF_ROW_HEIGHT-1   ; 3 (14)
-    ;jsr HorizPositionPF             ; 6 (20)
     jsr HorizPosition               ; 6 (20)
 
     ; invoke fine horizontal positioning
@@ -810,9 +799,9 @@ RowKernel SUBROUTINE
     pla                             ; 4 (19)
     tay                             ; 2 (21)
     lda Sprites0,y                  ; 4 (25)
-    sta SpritePtrs                  ; 3 (28)
+    sta GfxPtr0                     ; 3 (28)
     lda Sprites1,y                  ; 4 (32)
-    sta SpritePtrs+2                ; 3 (35)
+    sta GfxPtr1                     ; 3 (35)
 
     ldy #PF_ROW_HEIGHT-3            ; 2 (37)
 .Row
@@ -820,17 +809,17 @@ RowKernel SUBROUTINE
     lda PFPattern,y                 ; 4 (29)
     tax                             ; 2 (31)
     lda #$08                        ; 2 (33)
-    sta COLUP0+BUILDING_OBJ         ; 3 (36)
+    sta COLUP1                      ; 3 (36)
     lda ShipPalette0,y              ; 4 (40)
-    sta COLUP0+ENEMY_OBJ            ; 3 (43)
-    lda (SpritePtrs+2),y            ; 5 (48)
+    sta COLUP0                      ; 3 (43)
+    lda (GfxPtr1),y                 ; 5 (48)
 
     sta WSYNC
-    sta GRP0+BUILDING_OBJ           ; 3 (3)
+    sta GRP1                        ; 3 (3)
     stx PF0                         ; 3 (6)
     stx PF1                         ; 3 (9)
-    lda (SpritePtrs),y              ; 5 (14)
-    sta GRP0+ENEMY_OBJ              ; 3 (17)
+    lda (GfxPtr0),y                 ; 5 (14)
+    sta GRP0                        ; 3 (17)
     stx PF2                         ; 3 (20)
 
     dey                             ; 2 (22)
@@ -842,7 +831,7 @@ RowKernel SUBROUTINE
 ShrinkerRowKernel SUBROUTINE
     ; position player
     ldx #PLAYER_OBJ                 ; 2 (40)
-    lda PosX0+PLAYER_ROW            ; 4 (44)
+    lda PlyrPosX                    ; 4 (44)
     jsr HorizPosition               ; 6 (50)
 
     ; invoke fine horizontal positioning
@@ -855,17 +844,18 @@ ShrinkerRowKernel SUBROUTINE
 
     ; calculate ending line
     lda ScreenPosY                  ; 3 (18)
-    and #PF_ROW_HEIGHT-1
-    tax
-    inx                             ; 2 (20)
-    inx                             ; 2 (22)
-    stx EndLine                     ; 3 (25)
+    and #PF_ROW_HEIGHT-1            ; 2 (20)
+    tax                             ; 2 (22)
+    inx                             ; 2 (24)
+    inx                             ; 2 (26)
+    stx EndLine                     ; 3 (29)
 
-    lda #PF_ROW_HEIGHT*2-3          ; 2 (27)
-    sbc EndLine                     ; 2 (29)
-    sta PlyrIdx                     ; 3 (32)
+    lda #PF_ROW_HEIGHT*2-3          ; 2 (31)
+    sec                             ; 2 (33) 
+    sbc EndLine                     ; 2 (35)
+    sta PlyrIdx                     ; 3 (38)
 
-    ldy #PF_ROW_HEIGHT*2-3          ; 2 (34)
+    ldy #PF_ROW_HEIGHT*2-3          ; 2 (40)
 .Row
     tya                             ; 2 (37)
     and #PF_ROW_HEIGHT-1            ; 2 (39)
@@ -880,9 +870,9 @@ ShrinkerRowKernel SUBROUTINE
     lda ShipGfx,x                   ; 5 (63)
 
     sta WSYNC
-    sta GRP0+PLAYER_OBJ             ; 3 (3)
+    sta GRP0                        ; 3 (3)
     lda ShipPalette0,x              ; 4 (7)
-    sta COLUP0+PLAYER_OBJ           ; 3 (10)
+    sta COLUP0                      ; 3 (10)
 
     lda Temp                        ; 3 (13)
     sta PF0                         ; 3 (16)
@@ -991,17 +981,13 @@ InitScreen SUBROUTINE
 
 InitPlayer SUBROUTINE
     ; init player's sprite
-    lda #<ShipGfx
-    sta Sprites0+PLAYER_ROW
     lda #[SCREEN_WIDTH/2 - 4]
-    sta PosX0+PLAYER_ROW
-    
+    sta PlyrPosX
     lda #0
     sta Score
     sta Score+1
     sta Score+2
     rts
-
 
 SpawnBuildings SUBROUTINE
     lda #0
@@ -1148,13 +1134,13 @@ LaserCollision SUBROUTINE
     lda PosX0,y
     sec
     sbc #4      ; -4 adjust offset
-    cmp PosX0+PLAYER_ROW
+    cmp PlyrPosX
     bcs .Continue
 
     ; detect if laser < enemy right edge
     clc
     adc #8      ; +8 enemy width
-    cmp PosX0+PLAYER_ROW
+    cmp PlyrPosX
     bcc .Continue
     
     ; hit
@@ -1203,12 +1189,6 @@ SpritePtrsClear SUBROUTINE
     bpl .Gfx
     rts
 
-; -----------------------------------------------------------------------------
-; Desc:     Updates the ship's position and speed by the fixed point
-;           integer values.
-; Inputs:
-; Outputs:
-; -----------------------------------------------------------------------------
 ShipUpdatePosition SUBROUTINE
     ; update player's vertical position
     lda ScreenPosY
@@ -1217,18 +1197,18 @@ ShipUpdatePosition SUBROUTINE
     sta ScreenPosY
 
     ; update player's horizontal position
-    lda PosX0+PLAYER_ROW
+    lda PlyrPosX
     clc
-    adc SpeedX0+PLAYER_ROW
+    adc PlyrSpeedX
     cmp #MAX_POS_X
     bcs .HaltShip
     cmp #MIN_POS_X
     bcc .HaltShip
-    sta PosX0+PLAYER_ROW
+    sta PlyrPosX
     jmp .Return
 .HaltShip
     lda #0
-    sta SpeedX0+PLAYER_ROW
+    sta PlyrSpeedX
 
 .Return
     rts
@@ -1397,7 +1377,6 @@ SpawnSprite SUBROUTINE
     ; if motionless, do nothing
     ; if traveling forward when Y = 0, then spawn a new top row
     ; if traveling backward when Y = 15, then spawn a new bottom row
-
     lda ScreenSpeedY
     beq .Return
     bmi .Reverse
@@ -1406,49 +1385,41 @@ SpawnSprite SUBROUTINE
     lda ScreenPosY
     cmp #PF_ROW_HEIGHT
     bcc .Return
-
     sec
     sbc #PF_ROW_HEIGHT
     sta ScreenPosY
-
-    jsr SpawnTop
+    jsr SpritesShiftDown
+    jsr SpawnInTop
     jmp .Return
 
 .Reverse
     lda ScreenPosY
     bpl .Return
-
     clc
     adc #PF_ROW_HEIGHT
     sta ScreenPosY
-    
-    jsr SpawnBottom
+    jsr SpritesShiftUp
+    jsr SpawnInBottom
 
 .Return
     rts
 
-SpawnTop SUBROUTINE
+SpritesShiftDown SUBROUTINE
     ; shift rows down
     ldy #1
 .ShiftDown
     lda Sprites0+1,y
     sta Sprites0,y
-
     lda Sprites1+1,y
     sta Sprites1,y
-
     lda SpeedX0+1,y
     sta SpeedX0,y
-
     lda SpeedX1+1,y
     sta SpeedX1,y
-
     lda PosX0+1,y
     sta PosX0,y
-
     lda PosX1+1,y
     sta PosX1,y
-
     iny
     cpy #MAX_ROWS-1
     bne .ShiftDown
@@ -1457,42 +1428,13 @@ SpawnTop SUBROUTINE
     lda #<BlankGfx
     sta Sprites0+MAX_ROWS-1
     sta Sprites1+MAX_ROWS-1
-    lda #0
     sta SpeedX0+MAX_ROWS-1
     sta SpeedX1+MAX_ROWS-1
     sta PosX0+MAX_ROWS-1
     sta PosX1+MAX_ROWS-1
-
-    ; spawn replacements
-    lda FrameCtr
-    and #$0f
-    cmp #8
-    bcs .Blank1
-    lda #<FighterGfx
-    sta Sprites0+MAX_ROWS-1
-    lda ScreenPosY
-    asl
-    adc #50
-    sta PosX0+MAX_ROWS-1
-    lda #1
-    sta SpeedX0+MAX_ROWS-1
-.Blank1
-
-    lda FrameCtr
-    eor INTIM
-    and #3
-    tax
-    lda Buildings,x
-    sta Sprites1+MAX_ROWS-1
-    bcc .Blank2
-    lda FrameCtr
-    and #%00011111
-    adc #90
-    sta PosX1+MAX_ROWS-1
-.Blank2
     rts
 
-SpawnBottom SUBROUTINE
+SpritesShiftUp SUBROUTINE
     ; shift rows up
     ldy #MAX_ROWS-1
 .ShiftUp
@@ -1508,49 +1450,154 @@ SpawnBottom SUBROUTINE
     sta PosX0,y
     lda PosX1-1,y
     sta PosX1,y
-
     dey
-    cpy #1
     bne .ShiftUp
 
     lda #<BlankGfx
-    sta Sprites0+1
-    sta Sprites1+1
-    lda #0
-    sta SpeedX0+1
-    sta SpeedX1+1
-    sta PosX0+1
-    sta PosX1+1
-
-    ; spawn replacements
-    lda FrameCtr
-    and #$0f
-    cmp #8
-    bcs .Blank1
-    lda #<FighterGfx
-    sta Sprites0+1
-    lda ScreenPosY
-    asl
-    adc #75
-    sta PosX0+1
-    lda #1
-    sta SpeedX0+1
-.Blank1
-
-    lda FrameCtr
-    eor INTIM
-    and #3
-    tax
-    lda Buildings,x
-    sta Sprites1+1
-    beq .Blank2
-    lda FrameCtr
-    and #%00011111
-    adc #90
-    sta PosX1+1
-.Blank2
-
+    sta Sprites0
+    sta Sprites1
+    sta SpeedX0
+    sta SpeedX1
+    sta PosX0
+    sta PosX1
     rts
+
+SpawnInTop SUBROUTINE
+    ; Spawn in alternating rows, so the adjacent row can't be occupied.
+    lda #<FuelGfx
+    sta Sprites1+MAX_ROWS-1
+    rts
+
+SpawnInBottom SUBROUTINE
+    ; Spawn in alternating rows, so the adjacent row can't be occupied.
+    lda #<CondoGfx
+    sta Sprites1
+    rts
+
+;SpawnTop SUBROUTINE
+;    ; shift rows down
+;    ldy #1
+;.ShiftDown
+;    lda Sprites0+1,y
+;    sta Sprites0,y
+;
+;    lda Sprites1+1,y
+;    sta Sprites1,y
+;
+;    lda SpeedX0+1,y
+;    sta SpeedX0,y
+;
+;    lda SpeedX1+1,y
+;    sta SpeedX1,y
+;
+;    lda PosX0+1,y
+;    sta PosX0,y
+;
+;    lda PosX1+1,y
+;    sta PosX1,y
+;
+;    iny
+;    cpy #MAX_ROWS-1
+;    bne .ShiftDown
+;
+;    ; load blank
+;    lda #<BlankGfx
+;    sta Sprites0+MAX_ROWS-1
+;    sta Sprites1+MAX_ROWS-1
+;    lda #0
+;    sta SpeedX0+MAX_ROWS-1
+;    sta SpeedX1+MAX_ROWS-1
+;    sta PosX0+MAX_ROWS-1
+;    sta PosX1+MAX_ROWS-1
+;
+;    ; spawn replacements
+;    lda FrameCtr
+;    and #$0f
+;    cmp #8
+;    bcs .Blank1
+;    lda #<FighterGfx
+;    sta Sprites0+MAX_ROWS-1
+;    lda ScreenPosY
+;    asl
+;    adc #50
+;    sta PosX0+MAX_ROWS-1
+;    lda #1
+;    sta SpeedX0+MAX_ROWS-1
+;.Blank1
+;
+;    lda FrameCtr
+;    eor INTIM
+;    and #3
+;    tax
+;    lda Buildings,x
+;    sta Sprites1+MAX_ROWS-1
+;    bcc .Blank2
+;    lda FrameCtr
+;    and #%00011111
+;    adc #90
+;    sta PosX1+MAX_ROWS-1
+;.Blank2
+;    rts
+;
+;SpawnBottom SUBROUTINE
+;    ; shift rows up
+;    ldy #MAX_ROWS-1
+;.ShiftUp
+;    lda Sprites0-1,y
+;    sta Sprites0,y
+;    lda Sprites1-1,y
+;    sta Sprites1,y
+;    lda SpeedX0-1,y
+;    sta SpeedX0,y
+;    lda SpeedX1-1,y
+;    sta SpeedX1,y
+;    lda PosX0-1,y
+;    sta PosX0,y
+;    lda PosX1-1,y
+;    sta PosX1,y
+;
+;    dey
+;    cpy #1
+;    bne .ShiftUp
+;
+;    lda #<BlankGfx
+;    sta Sprites0+1
+;    sta Sprites1+1
+;    lda #0
+;    sta SpeedX0+1
+;    sta SpeedX1+1
+;    sta PosX0+1
+;    sta PosX1+1
+;
+;    ; spawn replacements
+;    lda FrameCtr
+;    and #$0f
+;    cmp #8
+;    bcs .Blank1
+;    lda #<FighterGfx
+;    sta Sprites0+1
+;    lda ScreenPosY
+;    asl
+;    adc #75
+;    sta PosX0+1
+;    lda #1
+;    sta SpeedX0+1
+;.Blank1
+;
+;    lda FrameCtr
+;    eor INTIM
+;    and #3
+;    tax
+;    lda Buildings,x
+;    sta Sprites1+1
+;    beq .Blank2
+;    lda FrameCtr
+;    and #%00011111
+;    adc #90
+;    sta PosX1+1
+;.Blank2
+;    rts
+
 ; -----------------------------------------------------------------------------
 ; Data
 ; -----------------------------------------------------------------------------
@@ -1588,7 +1635,6 @@ GFX_BEGIN SET *
 BlankGfx
 ShipGfx
     ds.b 16, 0
-
 .Begin
     dc.b %00000000
     dc.b %00000000
@@ -1626,27 +1672,7 @@ FighterGfx
     dc.b %00000000
     dc.b %00000000
 FIGHTER_HEIGHT = * - FighterGfx
-
-#if 1
-ExplosionGfx
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %10000001
-    dc.b %11001010
-    dc.b %00101001
-    dc.b %01000100
-    dc.b %00111011
-    dc.b %01010100
-    dc.b %11001011
-    dc.b %00111010
-    dc.b %01001000
-    dc.b %10010010
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-EXPLOSION_HEIGHT = * - ExplosionGfx
-#endif
+    dc.b TYPE_ENEMY
 
 CondoGfx
     dc.b %00000000
@@ -1666,6 +1692,7 @@ CondoGfx
     dc.b %00000000
     dc.b %00000000
 Condo_HEIGHT = * - CondoGfx
+    dc.b TYPE_BUILDING
 
 BaseGfx
     dc.b %00000000
@@ -1685,6 +1712,7 @@ BaseGfx
     dc.b %00000000
     dc.b %00000000
 BASE_HEIGHT = * - BaseGfx
+    dc.b TYPE_BUILDING
 
 FuelGfx
     dc.b %00000000
@@ -1704,13 +1732,42 @@ FuelGfx
     dc.b %00000000
     dc.b %00000000
 FUEL_HEIGHT = * - FuelGfx
+    dc.b TYPE_BUILDING
+
+ExplosionGfx
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %10000001
+    dc.b %11001010
+    dc.b %00101001
+    dc.b %01000100
+    dc.b %00111011
+    dc.b %01010100
+    dc.b %11001011
+    dc.b %00111010
+    dc.b %01001000
+    dc.b %10010010
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+EXPLOSION_HEIGHT = * - ExplosionGfx
+    dc.b TYPE_ACTION
 
 ; this pattern is generated by ./bin/playfield.exe
 ; the last byte must be repeated.
+#if 1
 PFPattern
     dc.b $6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
     dc.b $0d, $83, $09, $3a, $a0, $7e, $49, $6d
 PF_ROW_HEIGHT = * - PFPattern
+#else
+; test pattern
+PFPattern
+    dc.b $ff, $00, $00, $00, $00, $00, $00, $00
+    dc.b $00, $00, $00, $00, $00, $00, $00, $ff
+PF_ROW_HEIGHT = * - PFPattern
+#endif
 
 Digits
 Digit0
@@ -1853,15 +1910,6 @@ ModeKernel
 ModeOverscan
     dc.w TitleOverscan      ; MODE_TITLE
     dc.w GameOverscan       ; MODE_GAME
-
-#if 0
-Mult6
-    dc.b   0,   6,  12,  18,  24,  30,  36,  42,  48,  54
-    dc.b  60,  66,  72,  78,  84,  90,  96, 102, 108, 114
-    dc.b 120, 126, 132, 138, 144, 150, 156, 162, 168, 174
-    dc.b 180, 186, 192, 198, 204, 210, 216, 222, 228, 234
-    dc.b 240, 246, 252
-#endif
 
     ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
 
@@ -2006,28 +2054,6 @@ SetTitleCopy SUBROUTINE
     lda #>BlankGfx
     sta SpritePtrs+11
 
-#if 0
-    lda #<TitleCopy0
-    sta SpritePtrs+2
-    lda #<TitleCopy1
-    sta SpritePtrs+4
-    lda #<TitleCopy2
-    sta SpritePtrs+6
-
-    lda #>TitleCopy
-    sta SpritePtrs+3
-    sta SpritePtrs+5
-    sta SpritePtrs+7
-
-    lda #<BlankGfx
-    sta SpritePtrs
-    sta SpritePtrs+8
-    sta SpritePtrs+10
-    lda #>BlankGfx
-    sta SpritePtrs+1
-    sta SpritePtrs+9
-    sta SpritePtrs+11
-#endif
     rts
 
 SetTitleName SUBROUTINE
