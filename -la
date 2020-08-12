@@ -1,0 +1,48 @@
+[33mcommit f5977a201066eb0c508cbcdb3e079395ef28c0d7[m[33m ([m[1;36mHEAD -> [m[1;32mexperimental[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/experimental[m[33m, [m[1;32mmaster[m[33m)[m
+Author: Edward Gilmour <>
+Date:   Mon Aug 10 20:55:08 2020 -0700
+
+    Kernel update and fixes
+    
+    Added sprites to top row
+    Fixed HUD position
+    Fixed playfield distortion
+
+[33mcommit 3cf76a4a5f1a2a28720f153bb3f869dace222567[m
+Author: Edward Gilmour <>
+Date:   Mon Aug 10 04:29:02 2020 -0700
+
+    Title screen
+    
+    Added version number.
+
+[33mcommit 24403c1df84b0aa5932e2363e3b3285d19bd5b6d[m
+Author: Edward Gilmour <>
+Date:   Mon Aug 10 04:14:47 2020 -0700
+
+    Gfx
+    
+    3 buildings.
+
+[33mcommit d4ff7c9195d34c3a69b93dd5e908dcaf4bf41a67[m
+Author: Edward Gilmour <>
+Date:   Mon Aug 10 04:00:43 2020 -0700
+
+    Updated title screen
+    
+    Added copyright
+
+[33mcommit c554f066e223ffa1a34e6dbd08a337444705d831[m
+Author: Edward Gilmour <baconpizza@users.noreply.github.com>
+Date:   Sun Aug 9 05:14:36 2020 -0700
+
+    Delete w
+
+[33mcommit ba451e7c514ddabe025058e8d69bbbfbd024a9d8[m
+Author: Edward Gilmour <>
+Date:   Sun Aug 9 05:12:17 2020 -0700
+
+    Update
+    
+    Improvements to title screen
+    Bug fixes

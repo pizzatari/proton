@@ -91,7 +91,7 @@ M0_OBJ              = 2
 M1_OBJ              = 3
 BL_OBJ              = 4
 
-PLAYER_ROW          = 0         ; Sprites0[0]
+PLAYER_ROW          = 0         ; Sprites0[1]
 PLAYER_OBJ          = P0_OBJ
 ENEMY_OBJ           = P0_OBJ
 BUILDING_OBJ        = P1_OBJ
@@ -106,6 +106,8 @@ MISSILE_OBJ         = M0_OBJ
 FrameCtr        ds.b 1
 Mode            ds.b 1
 Delay           ds.b 1
+TextureIdx      ds.b 1
+PlyrGRP1        ds.b 1
 SpritePtrs      ds.w MAX_NUM_PTRS
 Ptr             ds.w 1
 
@@ -142,10 +144,8 @@ LaserAudioFrame ds.b 1
 ; graphics data
 
 LocalVars       ds.b 14
-
 EndLine         = LocalVars+1
 PlyrIdx         = LocalVars+2
-
 HUDHeight       = LocalVars+1
 
     ECHO "RAM used =", (* - $80)d, "bytes"
@@ -570,6 +570,22 @@ GameVertBlank SUBROUTINE
     sta HMM1
     sta HMP1
 
+    ; pre-cache texture graphics data (Player Row)
+    lda #PF_ROW_HEIGHT-1
+    clc
+    adc ScreenPosY
+    and #PF_ROW_HEIGHT-1
+    sta TextureIdx
+
+    ; pre-cache building graphics (Player Row)
+    lda Sprites1+PLAYER_ROW
+    sta Ptr
+    lda #>GFX_BEGIN
+    sta Ptr+1
+    ldy TextureIdx
+    lda (Ptr),y
+    sta PlyrGRP1
+
     TIMER_WAIT
    
     ; turn on the display
@@ -600,9 +616,78 @@ GameKernel SUBROUTINE
     ldy #2
     jsr RowKernel
     ldy #1
-    jsr RowKernel
-    ldy #0
     jsr ShrinkerRowKernel
+    ; returns on cycle 34
+
+    ; ------------------------------------------------------------------------
+    ; Player row
+    ; ------------------------------------------------------------------------
+    jsr PlayerRowKernel             ; 6 (40)
+
+#if 0
+PlayerRow
+    ; position player
+    ldx #0                          ; 2
+    lda PosX0                       ; 3
+    jsr HorizPosition               ; 6 (45)
+
+    ; invoke fine horizontal positioning
+    sta WSYNC
+    sta HMOVE                       ; 3 (3)
+
+    dec TextureIdx                  ; 5 (8)
+    lda TextureIdx                  ; 3 (11)
+    and #PF_ROW_HEIGHT-1            ; 2 (13)
+    tay                             ; 2
+    lda PFPattern,y                 ; 3 (16)
+
+    sta PF0                         ; 3 (19)
+    sta PF1                         ; 3 (22)
+    sta PF2                         ; 3 (25)
+
+    ;lda Sprites0,y                 ; 4 (25)
+    ;sta SpritePtrs                 ; 3 (28)
+    lda Sprites1                    ; 4 (29)
+    sta SpritePtrs+2                ; 3 (32)
+
+    ldx #PF_ROW_HEIGHT-3            ; 2 (42)
+.Row
+    lda ShipPalette0,x              ; 4 (22)
+    sta COLUP0+PLAYER_OBJ           ; 3 (25)
+
+    lda ShipGfx,x                   ; 5 (30)
+    sta GRP0+PLAYER_OBJ             ; 3 (33)
+
+    dec TextureIdx                  ; 5 (8)
+    lda TextureIdx                  ; 3 (11)
+    and #PF_ROW_HEIGHT-1            ; 2 (13)
+    tay                             ; 2
+
+    lda (SpritePtrs+2),y            ; 5 (38)
+    sta GRP0+BUILDING_OBJ           ; 3 (41)
+
+    sta WSYNC
+    lda PFPattern,y                 ; 4 (4)
+    sta PF0                         ; 3 (7)
+    sta PF1                         ; 3 (10)
+    sta PF2                         ; 3 (13)
+
+    dex                             ; 2 (15)
+    bpl .Row                        ; 2 (17)
+#endif
+
+    ; reset graphics
+    lda #0                          ; 2 (20)
+    sta NUSIZ1                      ; 3 (23)
+    sta ENAM0                       ; 3 (3)
+    sta WSYNC
+    sta COLUBK                      ; 3 (6)
+    sta PF0                         ; 3 (9)
+    sta PF1                         ; 3 (12)
+    sta PF2                         ; 3 (15)
+    sta GRP0                        ; 3 
+    sta GRP1                        ; 3 
+    sta GRP0                        ; 3 
 
     jsr HUDSetup
     jsr HUDKernel
@@ -744,46 +829,27 @@ GameIO SUBROUTINE
     ALIGN 256
 KERNEL_BEGIN SET *
 
-#if 1
 ExpanderRowKernel SUBROUTINE
     lda ScreenPosY
     and #PF_ROW_HEIGHT-1
     tay
-    ;iny
 .Row
-    ldx PFPattern,y               ; 4 (37)
+    ldx PFPattern,y                 ; 4 (37)
     lda ShipPalette0,y              ; 4 (41)
     sta WSYNC
 
-    sta COLUP0+ENEMY_OBJ            ; 3 (3)
+    sta COLUP0                      ; 3 (3)
     lda (SpritePtrs),y              ; 5 (8)
-    sta GRP0+ENEMY_OBJ              ; 3 (11)
+    sta GRP0                        ; 3 (11)
     lda (SpritePtrs+2),y            ; 5 (16)
-    sta GRP0+BUILDING_OBJ           ; 3 (19)
+    sta GRP1                        ; 3 (19)
     stx PF0                         ; 3 (22)
     stx PF1                         ; 3 (25)
     stx PF2                         ; 3 (28)
 
     dey                             ; 2 (30)
-    ;bne .Row                        ; 2 (32)
     bpl .Row                        ; 2 (32)
     rts                             ; 6 (38)
-#else
-ExpanderRowKernel SUBROUTINE
-    lda ScreenPosY
-    and #PF_ROW_HEIGHT-1
-    tay
-    iny
-.Row
-    lda PFPattern-1,y               ; 4 (17)
-    sta WSYNC
-    sta PF0                         ; 3 (3)
-    sta PF1                         ; 3 (6)
-    sta PF2                         ; 3 (9)
-    dey                             ; 2 (11)
-    bne .Row                        ; 2 (13)
-    rts                             ; 6 (19)
-#endif
 
 RowKernel SUBROUTINE
     tya                             ; 2 (2)
@@ -819,33 +885,31 @@ RowKernel SUBROUTINE
     ; texture indexed from 0 to PF_ROW_HEIGHT-1
     lda PFPattern,y                 ; 4 (29)
     tax                             ; 2 (31)
-    lda #$08                        ; 2 (33)
-    sta COLUP0+BUILDING_OBJ         ; 3 (36)
+    lda #COLOR_BUILDING             ; 2 (33)
+    sta COLUP1                      ; 3 (36)
     lda ShipPalette0,y              ; 4 (40)
-    sta COLUP0+ENEMY_OBJ            ; 3 (43)
+    sta COLUP0                      ; 3 (43)
     lda (SpritePtrs+2),y            ; 5 (48)
 
     sta WSYNC
-    sta GRP0+BUILDING_OBJ           ; 3 (3)
+    sta GRP1                        ; 3 (3)
     stx PF0                         ; 3 (6)
     stx PF1                         ; 3 (9)
     lda (SpritePtrs),y              ; 5 (14)
-    sta GRP0+ENEMY_OBJ              ; 3 (17)
+    sta GRP0                        ; 3 (17)
     stx PF2                         ; 3 (20)
 
     dey                             ; 2 (22)
     bpl .Row                        ; 2 (24)
     rts                             ; 6 (30)
-    ; This must exit before or on cycle 42 for the next
-    ; row to meet it's cycle timings.
 
-ShrinkerRowKernel SUBROUTINE
-    ; position player
-    ldx #PLAYER_OBJ                 ; 2 (40)
-    lda PosX0+PLAYER_ROW            ; 4 (44)
+ShrinkerRowKernel SUBROUTINE        ; 30 + 8 = 38
+    ; position enemy 
+    ldx #ENEMY_OBJ                  ; 2 (40)
+    lda PosX0,y                     ; 4 (44)
     jsr HorizPosition               ; 6 (50)
 
-    ; invoke fine horizontal positioning
+    ; fine horizontal positioning
     sta WSYNC
     sta HMOVE                       ; 3 (3)
     ldy PFPattern+PF_ROW_HEIGHT-2   ; 3 (6)
@@ -853,57 +917,160 @@ ShrinkerRowKernel SUBROUTINE
     sty PF1                         ; 3 (12)
     sty PF2                         ; 3 (15)
 
-    ; calculate ending line
+    ; row size is opposite expander row size
     lda ScreenPosY                  ; 3 (18)
-    and #PF_ROW_HEIGHT-1
-    tax
-    inx                             ; 2 (20)
-    inx                             ; 2 (22)
-    stx EndLine                     ; 3 (25)
+    eor #PF_ROW_HEIGHT-1            ; 3 (21)
+    clc                             ; 2 (23)
+    adc #PF_ROW_HEIGHT-2            ; 2 (25)
+    tax                             ; 2 (27) 
 
-    lda #PF_ROW_HEIGHT*2-3          ; 2 (27)
-    sbc EndLine                     ; 2 (29)
-    sta PlyrIdx                     ; 3 (32)
-
-    ldy #PF_ROW_HEIGHT*2-3          ; 2 (34)
+    ; index into graphics
+    lda #PF_ROW_HEIGHT-2            ; 2 (29)
+    sta Temp                        ; 3 (32)
 .Row
-    tya                             ; 2 (37)
+    dec Temp                        ; 5 (34)
+    lda Temp                        ; 3 (37)
     and #PF_ROW_HEIGHT-1            ; 2 (39)
-    tax                             ; 2 (41)
-    lda PFPattern,x                 ; 4 (45)
-    sta Temp                        ; 3 (48)
+    tay                             ; 2 (41)
+    lda (SpritePtrs),y              ; 5 (46)
 
-    lda PlyrIdx                     ; 3 (51)
-    and #PF_ROW_HEIGHT*2-1          ; 2 (53)
-    eor #$1f                        ; 2 (55)     reversing idx reduces ROM space
-    tax                             ; 3 (58)
+    sta WSYNC
+    sta GRP0                        ; 3 (3)
+    lda (SpritePtrs+2),y            ; 5 (8)
+    sta GRP1                        ; 3 (11)
+
+    lda PFPattern,y                 ; 4 (15)
+    sta PF0                         ; 3 (18)
+    sta PF1                         ; 3 (21)
+    sta PF2                         ; 3 (24)
+
+    dex                             ; 2 (26)
+    bpl .Row                        ; 2 (28)
+    rts                             ; 6 (34)
+
+#if 1
+PlayerRowKernel SUBROUTINE          ; cpu cycle 34+8=42
+    ; position player
+    ldx TextureIdx                  ; 3 (43)
+    ldy PFPattern,x                 ; 4 (47)
+
+    ldx #PLAYER_OBJ                 ; 2 (49)
+    stx GRP0                        ; 3 (52)
+    lda PosX0+PLAYER_ROW            ; 4 (56)
+    jsr HorizPositionPF             ; 6 (62)
+
+    ; invoke fine horizontal positioning
+    sta WSYNC
+    sta HMOVE                       ; 3 (3)
+
+    dec TextureIdx                  ; 5
+    lda TextureIdx                  ; 3
+    and #PF_ROW_HEIGHT-1            ; 2
+    tax
+    lda PFPattern,x                 ; 3 (14)
+    sta PF0                         ; 3 (17)
+    sta PF1                         ; 3 (20)
+    sta PF2                         ; 3 (23)
+
+    ldx #PF_ROW_HEIGHT-3            ; 2 (25)
+.Row
+    lda ShipPalette0,x              ; 4 (40)
+    sta COLUP0+PLAYER_OBJ           ; 3 (43)
+
     lda ShipGfx,x                   ; 5 (63)
-
-    sta WSYNC
     sta GRP0+PLAYER_OBJ             ; 3 (3)
-    lda ShipPalette0,x              ; 4 (7)
-    sta COLUP0+PLAYER_OBJ           ; 3 (10)
 
-    lda Temp                        ; 3 (13)
-    sta PF0                         ; 3 (16)
-    sta PF1                         ; 3 (19)
-    sta PF2                         ; 3 (22)
+    txa
+    clc
+    adc ScreenPosY
+    and #PF_ROW_HEIGHT-1
+    tay
 
-    dec PlyrIdx                     ; 5 (27)
-    dey                             ; 2 (29)
-    cpy EndLine                     ; 3 (32)
-    bcs .Row                        ; 2 (34)
-
-    lda #0                          ; 2 (36)
-    sta NUSIZ1                      ; 3 (39)
     sta WSYNC
+    lda PFPattern,y                 ; 4 (29)
+    sta PF0                         ; 3 (3)
+    sta PF1                         ; 3 (6)
+    sta PF2                         ; 3 (9)
+
+    dex                             ; 2 (16)
+    bpl .Row                        ; 2 (18)
+
+    lda #0                          ; 2 (20)
+    sta NUSIZ1                      ; 3 (23)
     sta ENAM0                       ; 3 (3)
+    sta WSYNC
     sta COLUBK                      ; 3 (6)
     sta PF0                         ; 3 (9)
     sta PF1                         ; 3 (12)
     sta PF2                         ; 3 (15)
+    sta GRP0                        ; 3 
+    sta GRP1                        ; 3 
+    sta GRP0                        ; 3 
 
     rts                             ; 6 (21)
+#else
+PlayerRowKernel SUBROUTINE          ; cpu cycle 34+8=42
+    ; position player
+    ldx TextureIdx                  ; 3 (45)
+    ldy PFPattern,x                 ; 4 (49)
+
+    ldx #PLAYER_OBJ                 ; 2 (51)
+    lda PosX0+PLAYER_ROW            ; 4 (55)
+    jsr HorizPositionPF             ; 6 (61)
+
+    ; invoke fine horizontal positioning
+    sta WSYNC
+    sta HMOVE                       ; 3 (3)
+
+    dec TextureIdx                  ; 5
+    lda TextureIdx                  ; 3
+    and #PF_ROW_HEIGHT-1            ; 2
+    tax
+    lda PFPattern,x                 ; 3 (14)
+    sta PF0                         ; 3 (17)
+    sta PF1                         ; 3 (20)
+    sta PF2                         ; 3 (23)
+
+    ldx #PF_ROW_HEIGHT-3            ; 2 (25)
+.Row
+    lda ShipPalette0,x              ; 4 (40)
+    sta COLUP0+PLAYER_OBJ           ; 3 (43)
+
+    lda ShipGfx,x                   ; 5 (63)
+    sta GRP0+PLAYER_OBJ             ; 3 (3)
+
+    txa
+    clc
+    adc ScreenPosY
+    and #PF_ROW_HEIGHT-1
+    tay
+
+    lda (SpritePtrs+2),y            ; 5 (48)
+    sta GRP0+BUILDING_OBJ           ; 3 (3)
+
+    sta WSYNC
+    lda PFPattern,y                 ; 4 (29)
+    sta PF0                         ; 3 (3)
+    sta PF1                         ; 3 (6)
+    sta PF2                         ; 3 (9)
+
+    dex                             ; 2 (16)
+    bpl .Row                        ; 2 (18)
+
+    lda #0                          ; 2 (20)
+    sta NUSIZ1                      ; 3 (23)
+    sta ENAM0                       ; 3 (3)
+    sta WSYNC
+    sta COLUBK                      ; 3 (6)
+    sta PF0                         ; 3 (9)
+    sta PF1                         ; 3 (12)
+    sta PF2                         ; 3 (15)
+    sta GRP0                        ; 3 
+    sta GRP1                        ; 3 
+    sta GRP0                        ; 3 
+
+    rts                             ; 6 (21)
+#endif
 
     IF >KERNEL_BEGIN != >*
         ECHO "(1) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
@@ -985,7 +1152,7 @@ InitScreen SUBROUTINE
     ; init screen
     lda #8
     sta ScreenPosY
-    lda #0
+    lda #1
     sta ScreenSpeedY
     rts
 
@@ -1020,11 +1187,8 @@ SpawnBuildings SUBROUTINE
     ; init sprite
     ldx #<FuelGfx
     stx Sprites1,y
-    ldx #<BaseGfx
-    stx Sprites1+1,y
     lda #0
     sta SpeedX1,y
-    dey
     dey
     bne .Pop
 
@@ -1324,28 +1488,59 @@ HorizPositionBG SUBROUTINE
     sta HMP0,X      ; 4 (27)
     rts
 
-; performs horizontal positioning while drawing a playfield pattern
-F; this must enter on or before cycle 62
 HorizPositionPF SUBROUTINE
     sty PF0         ; 3 (65)
-    sec             ; 2 (67)
-    sty PF1         ; 3 (70)
-    sty PF2         ; 3 (73)
-    sta WSYNC       ; 3 (76)
+    sty PF1         ; 3 (68)
+    sec             ; 2 (70)
+    sta WSYNC       ; 3 (73)
+    sty PF2         ; 3 (3)
+    sbc #15         ; 2 (5)
 
 .Div15
-    sbc #15         ; 4 (7)
-    bcs .Div15      ; 5 (12)
+    sbc #15         ; 2 (2)
+    bcs .Div15      ; 3 (5)
 
-    eor #7          ; 2 (14)
-    asl             ; 2 (16)
-    asl             ; 2 (18)
-    asl             ; 2 (20)
-    asl             ; 2 (22)
+    eor #7          ; 2 (11)
+    asl             ; 2 (13)
+    asl             ; 2 (15)
+    asl             ; 2 (17)
+    asl             ; 2 (19)
 
-    sta RESP0,X     ; 4 (26)
-    sta HMP0,X      ; 4 (30)
+    sta RESP0,X     ; 4 (23)
+    sta HMP0,X      ; 4 (27)
     rts
+    rts                     ; 6 (32)
+
+; performs horizontal positioning while drawing graphics
+; this must enter between cycles 40 and 43
+HorizPositionPlayer SUBROUTINE
+    ldx TextureIdx          ; 3 (48)
+    ldy PFPattern,x         ; 4 (52)
+    sec                     ; 2 (54)
+    lda PosX0+PLAYER_ROW    ; 3 (57)
+    nop                     ; 2 (59)
+    nop                     ; 2 (61)
+    sty PF0                 ; 3 (64) must be after cycle 55
+    sty PF1                 ; 3 (67) must be after cycle 66
+    sty PF2                 ; 3 (70)
+;    ldx PlyrGRP1            ; 3 (50)
+;    stx GRP1                ; 3 (70)
+
+    sta WSYNC
+
+.Div15
+    sbc #15                 ; 2 (7)
+    bcs .Div15              ; 2 (9)
+
+    eor #7                  ; 2 (11)
+    asl                     ; 2 (13)
+    asl                     ; 2 (15)
+    asl                     ; 2 (17)
+    asl                     ; 2 (19)
+
+    sta.w RESP0+PLAYER_ROW  ; 4 (23)
+    sta HMP0+PLAYER_ROW     ; 3 (26)
+    rts                     ; 6 (32)
 
 PlayAudio SUBROUTINE
     ; play laser sounds
@@ -1429,7 +1624,7 @@ SpawnSprite SUBROUTINE
 
 SpawnTop SUBROUTINE
     ; shift rows down
-    ldy #1
+    ldy #0
 .ShiftDown
     lda Sprites0+1,y
     sta Sprites0,y
@@ -1711,6 +1906,43 @@ PFPattern
     dc.b $6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
     dc.b $0d, $83, $09, $3a, $a0, $7e, $49, $6d
 PF_ROW_HEIGHT = * - PFPattern
+    dc.b $6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
+    dc.b $0d, $83, $09, $3a, $a0, $7e, $49, $6d
+ 
+; Expander:  1 -> 16      1 -> 16
+; Shrinker: 15 ->  0     31 -> 16 (+PF_ROW_HEIGHT)
+; ------------------     --------
+; Total:    16    16     32    32
+
+; A0, C0, *         
+;
+; When ScreenPosY = 3:
+;
+;             Texture pixel      Row pixel (scanline)
+;
+;  _________
+; |Fixed    | 15
+; |         |    ] 16px          ScreenPosY
+; |_________| 0
+;
+;  _________                     (15 - ScreenPosY + PF_ROW_HEIGHT
+; |Shinker  | 31                 (15 - 3) + 16
+; |         |    ] 16px
+; |- - - - -| 15
+; |         |    ] 15px - 0px
+; |_________| 0                  (15 - 3) + 1
+; 
+;  _________  ScreenPosY
+; |Player   | 15
+; |         |    ] 17px          (15 - ScreenPosY + PF_ROW_HEIGHT)
+; |_________| 0
+    lda ScreenPosY                  ; 3 (18)
+    eor #PF_ROW_HEIGHT-1            ; 3 (21)
+    clc                             ; 2 (23)
+    adc #PF_ROW_HEIGHT-2            ; 2 (25)
+    tax                             ; 2 (27) 
+;
+;
 
 Digits
 Digit0
