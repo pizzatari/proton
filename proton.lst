@@ -1407,6 +1407,7 @@
     632  f307		       20 05 f7 	      jsr	PlayAudio
     633  f30a							;jsr SpawnEnemies
     634  f30a
+<<<<<<< Updated upstream
     635  f30a				   .Delay
       0  f30a					      TIMER_WAIT
       1  f30a				   .Loop
@@ -2334,6 +2335,980 @@
    1556  f840							; -----------------------------------------------------------------------------
    1557  fb00					      ORG	ORG_ADDR + $b00
    1558  fb00
+=======
+    635  f30a				   GameIO     SUBROUTINE
+    636  f30a		       ad 82 02 	      lda	SWCHB
+    637  f30d		       29 01		      and	#SWITCH_RESET
+    638  f30f		       d0 03		      bne	.Joystick
+    639  f311		       4c 00 f0 	      jmp	Reset
+    640  f314
+    641  f314				   .Joystick
+    642  f314		       a5 82		      lda	Delay
+    643  f316		       d0 7d		      bne	.Return
+    644  f318
+    645  f318							; update every even frame
+    646  f318		       a5 80		      lda	FrameCtr
+    647  f31a		       29 01		      and	#1
+    648  f31c		       d0 4b		      bne	.CheckMovement
+    649  f31e
+    650  f31e				   .CheckRight
+    651  f31e							; read joystick
+    652  f31e		       ac 80 02 	      ldy	SWCHA
+    653  f321		       98		      tya
+    654  f322		       29 80		      and	#JOY0_RIGHT
+    655  f324		       d0 0f		      bne	.CheckLeft
+    656  f326		       a5 96		      lda	PlyrSpeedX
+    657  f328		       10 02		      bpl	.Dec1	; instant decceleration on change of direction
+    658  f32a		       a9 00		      lda	#0
+    659  f32c				   .Dec1
+    660  f32c		       18		      clc
+    661  f32d		       69 01		      adc	#ACCEL_X
+    662  f32f		       c9 04		      cmp	#MAX_SPEED_X+1
+    663  f331		       10 02		      bpl	.CheckLeft
+    664  f333		       85 96		      sta	PlyrSpeedX
+    665  f335
+    666  f335				   .CheckLeft
+    667  f335		       98		      tya
+    668  f336		       29 40		      and	#JOY0_LEFT
+    669  f338		       d0 0f		      bne	.CheckDown
+    670  f33a		       a5 96		      lda	PlyrSpeedX
+    671  f33c		       30 02		      bmi	.Dec2	; instant decceleration on change of direction
+    672  f33e		       a9 00		      lda	#0
+    673  f340				   .Dec2
+    674  f340		       38		      sec
+    675  f341		       e9 01		      sbc	#ACCEL_X
+    676  f343		       c9 fd		      cmp	#MIN_SPEED_X
+    677  f345		       30 02		      bmi	.CheckDown
+    678  f347		       85 96		      sta	PlyrSpeedX
+    679  f349
+    680  f349				   .CheckDown
+    681  f349		       98		      tya
+    682  f34a		       29 20		      and	#JOY0_DOWN
+    683  f34c		       d0 0b		      bne	.CheckUp
+    684  f34e
+    685  f34e		       a5 95		      lda	ScreenSpeedY
+    686  f350		       38		      sec
+    687  f351		       e9 01		      sbc	#ACCEL_Y
+    688  f353		       c9 f2		      cmp	#MIN_SPEED_Y
+    689  f355		       30 02		      bmi	.CheckUp
+    690  f357		       85 95		      sta	ScreenSpeedY
+    691  f359
+    692  f359				   .CheckUp
+    693  f359		       98		      tya
+    694  f35a		       29 10		      and	#JOY0_UP
+    695  f35c		       d0 0b		      bne	.CheckMovement
+    696  f35e
+    697  f35e		       a5 95		      lda	ScreenSpeedY
+    698  f360		       18		      clc
+    699  f361		       69 01		      adc	#ACCEL_Y
+    700  f363		       c9 0f		      cmp	#MAX_SPEED_Y+1
+    701  f365		       10 02		      bpl	.CheckMovement
+    702  f367		       85 95		      sta	ScreenSpeedY
+    703  f369
+    704  f369				   .CheckMovement
+    705  f369							; update every eighth frame
+    706  f369		       a5 80		      lda	FrameCtr
+    707  f36b		       29 03		      and	#3
+    708  f36d		       d0 1a		      bne	.CheckFire
+    709  f36f
+    710  f36f							; deccelerate horizontal motion when there's no input
+    711  f36f		       98		      tya
+    712  f370		       29 c0		      and	#JOY0_LEFT | JOY0_RIGHT
+    713  f372		       c9 c0		      cmp	#JOY0_LEFT | JOY0_RIGHT
+    714  f374		       d0 13		      bne	.CheckFire
+    715  f376		       a5 96		      lda	PlyrSpeedX
+    716  f378		       f0 0f		      beq	.CheckFire
+    717  f37a		       10 08		      bpl	.Pos
+    718  f37c		       18		      clc
+    719  f37d		       69 01		      adc	#FRICTION_X
+    720  f37f		       85 96		      sta	PlyrSpeedX
+    721  f381		       4c 89 f3 	      jmp	.CheckFire
+    722  f384				   .Pos
+    723  f384		       38		      sec
+    724  f385		       e9 01		      sbc	#FRICTION_X
+    725  f387		       85 96		      sta	PlyrSpeedX
+    726  f389
+    727  f389				   .CheckFire
+    728  f389		       a5 0c		      lda	INPT4
+    729  f38b		       45 ff		      eor	$ff
+    730  f38d		       29 80		      and	#JOY_FIRE
+    731  f38f		       18		      clc
+    732  f390		       2a		      rol
+    733  f391		       2a		      rol
+    734  f392		       2a		      rol
+    735  f393		       85 da		      sta	JoyFire
+    736  f395
+    737  f395				   .Return
+    738  f395		       60		      rts
+    739  f396
+    740  f400		       00 00 00 00*	      ALIGN	256
+    741  f400				   KERNEL_BEGIN SET	*
+    742  f400				   ExpanderRowKernel SUBROUTINE
+    743  f400		       a5 94		      lda	ScreenPosY
+    744  f402		       29 0f		      and	#PF_ROW_HEIGHT-1
+    745  f404		       a8		      tay
+    746  f405				   .Row
+    747  f405		       be 75 fc 	      ldx	PFPattern,y	; 4 (37)
+    748  f408		       b9 f1 fc 	      lda	ShipPalette0,y	; 4 (41)
+    749  f40b		       85 02		      sta	WSYNC
+    750  f40d
+    751  f40d		       85 06		      sta	COLUP0	; 3 (3)
+    752  f40f		       b1 85		      lda	(GfxPtr0),y	; 5 (8)
+    753  f411		       85 1b		      sta	GRP0	; 3 (11)
+    754  f413		       b1 87		      lda	(GfxPtr1),y	; 5 (16)
+    755  f415		       85 1c		      sta	GRP1	; 3 (19)
+    756  f417		       86 0d		      stx	PF0	; 3 (22)
+    757  f419		       86 0e		      stx	PF1	; 3 (25)
+    758  f41b		       86 0f		      stx	PF2	; 3 (28)
+    759  f41d
+    760  f41d		       88		      dey		; 2 (30)
+    761  f41e		       10 e5		      bpl	.Row	; 2 (32)
+    762  f420		       60		      rts		; 6 (38)
+    763  f421
+    764  f421							;ExpanderRowKernel SUBROUTINE
+    765  f421							;    lda ScreenPosY
+    766  f421							;    and #PF_ROW_HEIGHT-1
+    767  f421							;    tay
+    768  f421							;    iny
+    769  f421							;.Row
+    770  f421							;    lda PFPattern-1,y 	      ; 4 (17)
+    771  f421							;    sta WSYNC
+    772  f421							;    sta PF0			      ; 3 (3)
+    773  f421							;    sta PF1			      ; 3 (6)
+    774  f421							;    sta PF2			      ; 3 (9)
+    775  f421							;    dey			      ; 2 (11)
+    776  f421							;    bne .Row			      ; 2 (13)
+    777  f421							;    rts			      ; 6 (19)
+    778  f421
+    779  f421				   RowKernel  SUBROUTINE
+    780  f421		       98		      tya		; 2 (2)
+    781  f422		       48		      pha		; 3 (5)
+    782  f423
+    783  f423							; Two lines of the playfield need to be written out during
+    784  f423							; the horizontal positioning.
+    785  f423
+    786  f423		       a2 00		      ldx	#0	; 2 (7)
+    787  f425		       b9 c4 00 	      lda	PosX0,y	; 4 (11)
+    788  f428		       20 c1 f6 	      jsr	HorizPosition	; 6 (20)
+    789  f42b
+    790  f42b							; invoke fine horizontal positioning
+    791  f42b		       85 02		      sta	WSYNC
+    792  f42d		       85 2a		      sta	HMOVE	; 3 (3)
+    793  f42f		       ac 83 fc 	      ldy	PFPattern+PF_ROW_HEIGHT-2	; 3 (6)
+    794  f432		       84 0d		      sty	PF0	; 3 (9)
+    795  f434		       84 0e		      sty	PF1	; 3 (12)
+    796  f436		       84 0f		      sty	PF2	; 3 (15)
+    797  f438
+    798  f438							; setup sprite graphics pointer
+    799  f438		       68		      pla		; 4 (19)
+    800  f439		       a8		      tay		; 2 (21)
+    801  f43a		       b9 98 00 	      lda	Sprites0,y	; 4 (25)
+    802  f43d		       85 85		      sta	GfxPtr0	; 3 (28)
+    803  f43f		       b9 a3 00 	      lda	Sprites1,y	; 4 (32)
+    804  f442		       85 87		      sta	GfxPtr1	; 3 (35)
+    805  f444
+    806  f444		       a0 0d		      ldy	#PF_ROW_HEIGHT-3	; 2 (37)
+    807  f446				   .Row
+    808  f446							; texture indexed from 0 to PF_ROW_HEIGHT-1
+    809  f446		       b9 75 fc 	      lda	PFPattern,y	; 4 (29)
+    810  f449		       aa		      tax		; 2 (31)
+    811  f44a		       a9 08		      lda	#$08	; 2 (33)
+    812  f44c		       85 07		      sta	COLUP1	; 3 (36)
+    813  f44e		       b9 f1 fc 	      lda	ShipPalette0,y	; 4 (40)
+    814  f451		       85 06		      sta	COLUP0	; 3 (43)
+    815  f453		       b1 87		      lda	(GfxPtr1),y	; 5 (48)
+    816  f455
+    817  f455		       85 02		      sta	WSYNC
+    818  f457		       85 1c		      sta	GRP1	; 3 (3)
+    819  f459		       86 0d		      stx	PF0	; 3 (6)
+    820  f45b		       86 0e		      stx	PF1	; 3 (9)
+    821  f45d		       b1 85		      lda	(GfxPtr0),y	; 5 (14)
+    822  f45f		       85 1b		      sta	GRP0	; 3 (17)
+    823  f461		       86 0f		      stx	PF2	; 3 (20)
+    824  f463
+    825  f463		       88		      dey		; 2 (22)
+    826  f464		       10 e0		      bpl	.Row	; 2 (24)
+    827  f466		       60		      rts		; 6 (30)
+    828  f467							; This must exit before or on cycle 42 for the next
+    829  f467							; row to meet it's cycle timings.
+    830  f467
+    831  f467				   ShrinkerRowKernel SUBROUTINE
+    832  f467							; position player
+    833  f467		       a2 00		      ldx	#PLAYER_OBJ	; 2 (40)
+    834  f469		       a5 97		      lda	PlyrPosX	; 4 (44)
+    835  f46b		       20 c1 f6 	      jsr	HorizPosition	; 6 (50)
+    836  f46e
+    837  f46e							; invoke fine horizontal positioning
+    838  f46e		       85 02		      sta	WSYNC
+    839  f470		       85 2a		      sta	HMOVE	; 3 (3)
+    840  f472		       ac 83 fc 	      ldy	PFPattern+PF_ROW_HEIGHT-2	; 3 (6)
+    841  f475		       84 0d		      sty	PF0	; 3 (9)
+    842  f477		       84 0e		      sty	PF1	; 3 (12)
+    843  f479		       84 0f		      sty	PF2	; 3 (15)
+    844  f47b
+    845  f47b							; calculate ending line
+    846  f47b		       a5 94		      lda	ScreenPosY	; 3 (18)
+    847  f47d		       29 0f		      and	#PF_ROW_HEIGHT-1	; 2 (20)
+    848  f47f		       aa		      tax		; 2 (22)
+    849  f480		       e8		      inx		; 2 (24)
+    850  f481		       e8		      inx		; 2 (26)
+    851  f482		       86 dd		      stx	EndLine	; 3 (29)
+    852  f484
+    853  f484		       a9 1d		      lda	#PF_ROW_HEIGHT*2-3	; 2 (31)
+    854  f486		       38		      sec		; 2 (33) 
+    855  f487		       e5 dd		      sbc	EndLine	; 2 (35)
+    856  f489		       85 de		      sta	PlyrIdx	; 3 (38)
+    857  f48b
+    858  f48b		       a0 1d		      ldy	#PF_ROW_HEIGHT*2-3	; 2 (40)
+    859  f48d				   .Row
+    860  f48d		       98		      tya		; 2 (37)
+    861  f48e		       29 0f		      and	#PF_ROW_HEIGHT-1	; 2 (39)
+    862  f490		       aa		      tax		; 2 (41)
+    863  f491		       bd 75 fc 	      lda	PFPattern,x	; 4 (45)
+    864  f494		       85 83		      sta	Temp	; 3 (48)
+    865  f496
+    866  f496		       a5 de		      lda	PlyrIdx	; 3 (51)
+    867  f498		       29 1f		      and	#PF_ROW_HEIGHT*2-1	; 2 (53)
+    868  f49a		       49 1f		      eor	#$1f	; 2 (55)     reversing idx reduces ROM space
+    869  f49c		       aa		      tax		; 3 (58)
+    870  f49d		       bd 00 fc 	      lda	ShipGfx,x	; 5 (63)
+    871  f4a0
+    872  f4a0		       85 02		      sta	WSYNC
+    873  f4a2		       85 1b		      sta	GRP0	; 3 (3)
+    874  f4a4		       bd f1 fc 	      lda	ShipPalette0,x	; 4 (7)
+    875  f4a7		       85 06		      sta	COLUP0	; 3 (10)
+    876  f4a9
+    877  f4a9		       a5 83		      lda	Temp	; 3 (13)
+    878  f4ab		       85 0d		      sta	PF0	; 3 (16)
+    879  f4ad		       85 0e		      sta	PF1	; 3 (19)
+    880  f4af		       85 0f		      sta	PF2	; 3 (22)
+    881  f4b1
+    882  f4b1		       c6 de		      dec	PlyrIdx	; 5 (27)
+    883  f4b3		       88		      dey		; 2 (29)
+    884  f4b4		       c4 dd		      cpy	EndLine	; 3 (32)
+    885  f4b6		       b0 d5		      bcs	.Row	; 2 (34)
+    886  f4b8
+    887  f4b8		       a9 00		      lda	#0	; 2 (36)
+    888  f4ba		       85 05		      sta	NUSIZ1	; 3 (39)
+    889  f4bc		       85 02		      sta	WSYNC
+    890  f4be		       85 1d		      sta	ENAM0	; 3 (3)
+    891  f4c0		       85 09		      sta	COLUBK	; 3 (6)
+    892  f4c2		       85 0d		      sta	PF0	; 3 (9)
+    893  f4c4		       85 0e		      sta	PF1	; 3 (12)
+    894  f4c6		       85 0f		      sta	PF2	; 3 (15)
+    895  f4c8
+    896  f4c8		       60		      rts		; 6 (21)
+    897  f4c9
+    898  f4c9				  -	      IF	>KERNEL_BEGIN != >*
+    899  f4c9				  -	      ECHO	"(1) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
+    900  f4c9					      ENDIF
+    901  f4c9
+    902  f500		       00 00 00 00*	      ALIGN	256
+    903  f500				   KERNEL_BEGIN SET	*
+    904  f500				   HUDKernel  SUBROUTINE
+    905  f500		       a9 ff		      lda	#$ff	; 2 (8)
+    906  f502		       a2 00		      ldx	#0	; 2 (10)
+    907  f504		       a0 01		      ldy	#1	; 2 (12)
+    908  f506
+    909  f506							; top border (3 lines)
+    910  f506		       85 02		      sta	WSYNC
+    911  f508		       86 09		      stx	COLUBK	; 3 (3)
+    912  f50a		       86 08		      stx	COLUPF	; 3 (6)
+    913  f50c		       85 0d		      sta	PF0	; 3 (9)
+    914  f50e		       86 0e		      stx	PF1	; 3 (12)
+    915  f510		       86 0f		      stx	PF2	; 3 (15)
+    916  f512							; reflect playfield
+    917  f512		       84 0a		      sty	CTRLPF	; 3 (18)
+    918  f514		       84 25		      sty	VDELP0	; 3 (21)
+    919  f516		       84 26		      sty	VDELP1	; 3 (24)
+    920  f518
+    921  f518							; status panel (X = 0 from above)
+    922  f518		       a9 47		      lda	#71	; 2 (20)
+    923  f51a		       ac 11 fd 	      ldy	HUDPalette	; 3 (23)
+    924  f51d		       20 d3 f6 	      jsr	HorizPositionBG	; 6 (6)
+    925  f520
+    926  f520		       a9 4f		      lda	#71+8	; 2 (2)
+    927  f522		       a2 01		      ldx	#1	; 2 (4)
+    928  f524		       ac 12 fd 	      ldy	HUDPalette+1	; 3 (7)
+    929  f527		       20 d3 f6 	      jsr	HorizPositionBG	; 6 (13)
+    930  f52a
+    931  f52a		       ad 13 fd 	      lda	HUDPalette+2	; 3 (16)
+    932  f52d		       85 02		      sta	WSYNC
+    933  f52f		       85 2a		      sta	HMOVE	; 3 (3)
+    934  f531		       85 09		      sta	COLUBK	; 3 (6)
+    935  f533
+    936  f533							; 3 (9) copies, medium spaced
+    937  f533		       a9 03		      lda	#%011	; 2 (11)
+    938  f535		       85 04		      sta	NUSIZ0	; 3 (14)
+    939  f537		       85 05		      sta	NUSIZ1	; 3 (17)
+    940  f539
+    941  f539		       a9 0e		      lda	#COLOR_WHITE	; 2 (19)
+    942  f53b		       85 06		      sta	COLUP0	; 3 (22)
+    943  f53d		       85 07		      sta	COLUP1	; 3 (25)
+    944  f53f
+    945  f53f		       a0 06		      ldy	#DIGIT_HEIGHT-1	; 2 (27)
+    946  f541		       20 00 ff 	      jsr	DrawWideSprite56	; returns on cycle 67
+    947  f544
+    948  f544		       85 02		      sta	WSYNC
+    949  f546		       ad 12 fd 	      lda	HUDPalette+1	; 3 (3)
+    950  f549		       85 09		      sta	COLUBK	; 3 (6)
+    951  f54b
+    952  f54b		       85 02		      sta	WSYNC
+    953  f54d		       ad 11 fd 	      lda	HUDPalette	; 3 (3)
+    954  f550		       85 09		      sta	COLUBK	; 3 (6)
+    955  f552		       a9 00		      lda	#0	; 2 (8)
+    956  f554		       85 25		      sta	VDELP0	; 3 (11)
+    957  f556		       85 26		      sta	VDELP1	; 3 (14)
+    958  f558		       85 04		      sta	NUSIZ0	; 3 (17)
+    959  f55a		       85 05		      sta	NUSIZ1	; 3 (20)
+    960  f55c
+    961  f55c							; restore playfield
+    962  f55c		       85 02		      sta	WSYNC
+    963  f55e		       85 0d		      sta	PF0	; 3 (3)
+    964  f560		       85 09		      sta	COLUBK	; 3 (6)
+    965  f562		       85 0a		      sta	CTRLPF	; 3 (9)
+    966  f564		       85 0e		      sta	PF1	; 3 (12)
+    967  f566		       85 0f		      sta	PF2	; 3 (15)
+    968  f568		       60		      rts		; 6 (12)
+    969  f569
+    970  f569				  -	      IF	>KERNEL_BEGIN != >*
+    971  f569				  -	      ECHO	"(2) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
+    972  f569					      ENDIF
+    973  f569
+    974  f569				   InitScreen SUBROUTINE
+    975  f569							; init screen
+    976  f569		       a9 08		      lda	#8
+    977  f56b		       85 94		      sta	ScreenPosY
+    978  f56d		       a9 00		      lda	#0
+    979  f56f		       85 95		      sta	ScreenSpeedY
+    980  f571		       60		      rts
+    981  f572
+    982  f572				   InitPlayer SUBROUTINE
+    983  f572							; init player's sprite
+    984  f572		       a9 4c		      lda	#[SCREEN_WIDTH/2 - 4]
+    985  f574		       85 97		      sta	PlyrPosX
+    986  f576		       a9 00		      lda	#0
+    987  f578		       85 91		      sta	Score
+    988  f57a		       85 92		      sta	Score+1
+    989  f57c		       85 93		      sta	Score+2
+    990  f57e		       60		      rts
+    991  f57f
+    992  f57f				   SpawnBuildings SUBROUTINE
+    993  f57f		       a9 00		      lda	#0
+    994  f581		       a0 0a		      ldy	#MAX_ROWS-1
+    995  f583				   .Loop
+    996  f583		       19 a3 00 	      ora	Sprites1,y
+    997  f586		       88		      dey
+    998  f587		       d0 fa		      bne	.Loop
+    999  f589
+   1000  f589		       c9 00		      cmp	#0
+   1001  f58b		       d0 13		      bne	.Return
+   1002  f58d
+   1003  f58d							; populate sprites with some values
+   1004  f58d		       a0 0a		      ldy	#MAX_ROWS-1
+   1005  f58f				   .Pop
+   1006  f58f							; init sprite
+   1007  f58f		       a2 53		      ldx	#<FuelGfx
+   1008  f591		       96 a3		      stx	Sprites1,y
+   1009  f593		       a2 42		      ldx	#<BaseGfx
+   1010  f595		       96 a4		      stx	Sprites1+1,y
+   1011  f597		       a9 00		      lda	#0
+   1012  f599		       99 b9 00 	      sta	SpeedX1,y
+   1013  f59c		       88		      dey
+   1014  f59d		       88		      dey
+   1015  f59e		       d0 ef		      bne	.Pop
+   1016  f5a0
+   1017  f5a0				   .Return
+   1018  f5a0		       60		      rts
+   1019  f5a1
+   1020  f5a1				   SpawnEnemies SUBROUTINE
+   1021  f5a1		       a9 00		      lda	#0
+   1022  f5a3		       a0 0a		      ldy	#MAX_ROWS-1
+   1023  f5a5				   .Loop
+   1024  f5a5		       19 98 00 	      ora	Sprites0,y
+   1025  f5a8		       88		      dey
+   1026  f5a9		       d0 fa		      bne	.Loop
+   1027  f5ab
+   1028  f5ab		       c9 00		      cmp	#0
+   1029  f5ad		       d0 1d		      bne	.Return
+   1030  f5af
+   1031  f5af							; populate sprites with some values
+   1032  f5af		       a2 20		      ldx	#<FighterGfx
+   1033  f5b1		       a0 0a		      ldy	#MAX_ROWS-1
+   1034  f5b3				   .Pop
+   1035  f5b3							; init sprite
+   1036  f5b3		       96 98		      stx	Sprites0,y
+   1037  f5b5
+   1038  f5b5							; init horizontal position
+   1039  f5b5		       98		      tya
+   1040  f5b6		       0a		      asl
+   1041  f5b7		       0a		      asl
+   1042  f5b8		       0a		      asl
+   1043  f5b9		       69 19		      adc	#25
+   1044  f5bb		       99 c4 00 	      sta	PosX0,y
+   1045  f5be
+   1046  f5be							; init speed
+   1047  f5be		       98		      tya
+   1048  f5bf		       29 01		      and	#1
+   1049  f5c1		       d0 03		      bne	.Good
+   1050  f5c3		       38		      sec
+   1051  f5c4		       e9 01		      sbc	#1
+   1052  f5c6				   .Good
+   1053  f5c6		       99 ae 00 	      sta	SpeedX0,y
+   1054  f5c9		       88		      dey
+   1055  f5ca		       d0 e7		      bne	.Pop
+   1056  f5cc
+   1057  f5cc				   .Return
+   1058  f5cc		       60		      rts
+   1059  f5cd
+   1060  f5cd				   HUDSetup   SUBROUTINE
+   1061  f5cd		       a6 91		      ldx	Score
+   1062  f5cf		       8a		      txa
+   1063  f5d0		       29 f0		      and	#$f0
+   1064  f5d2		       4a		      lsr
+   1065  f5d3		       4a		      lsr
+   1066  f5d4		       4a		      lsr
+   1067  f5d5		       4a		      lsr
+   1068  f5d6		       a8		      tay
+   1069  f5d7		       b9 cb fc 	      lda	DigitTable,y
+   1070  f5da		       85 85		      sta	SpritePtrs
+   1071  f5dc
+   1072  f5dc		       8a		      txa
+   1073  f5dd		       29 0f		      and	#$0f
+   1074  f5df		       a8		      tay
+   1075  f5e0		       b9 cb fc 	      lda	DigitTable,y
+   1076  f5e3		       85 87		      sta	SpritePtrs+2
+   1077  f5e5
+   1078  f5e5		       a6 92		      ldx	Score+1
+   1079  f5e7		       8a		      txa
+   1080  f5e8		       29 f0		      and	#$f0
+   1081  f5ea		       4a		      lsr
+   1082  f5eb		       4a		      lsr
+   1083  f5ec		       4a		      lsr
+   1084  f5ed		       4a		      lsr
+   1085  f5ee		       a8		      tay
+   1086  f5ef		       b9 cb fc 	      lda	DigitTable,y
+   1087  f5f2		       85 89		      sta	SpritePtrs+4
+   1088  f5f4
+   1089  f5f4		       8a		      txa
+   1090  f5f5		       29 0f		      and	#$0f
+   1091  f5f7		       a8		      tay
+   1092  f5f8		       b9 cb fc 	      lda	DigitTable,y
+   1093  f5fb		       85 8b		      sta	SpritePtrs+6
+   1094  f5fd
+   1095  f5fd		       a6 93		      ldx	Score+2
+   1096  f5ff		       8a		      txa
+   1097  f600		       29 f0		      and	#$f0
+   1098  f602		       4a		      lsr
+   1099  f603		       4a		      lsr
+   1100  f604		       4a		      lsr
+   1101  f605		       4a		      lsr
+   1102  f606		       a8		      tay
+   1103  f607		       b9 cb fc 	      lda	DigitTable,y
+   1104  f60a		       85 8d		      sta	SpritePtrs+8
+   1105  f60c
+   1106  f60c		       8a		      txa
+   1107  f60d		       29 0f		      and	#$0f
+   1108  f60f		       a8		      tay
+   1109  f610		       b9 cb fc 	      lda	DigitTable,y
+   1110  f613		       85 8f		      sta	SpritePtrs+10
+   1111  f615
+   1112  f615		       a9 fc		      lda	#>Digits
+   1113  f617		       85 86		      sta	SpritePtrs+1
+   1114  f619		       85 88		      sta	SpritePtrs+3
+   1115  f61b		       85 8a		      sta	SpritePtrs+5
+   1116  f61d		       85 8c		      sta	SpritePtrs+7
+   1117  f61f		       85 8e		      sta	SpritePtrs+9
+   1118  f621		       85 90		      sta	SpritePtrs+11
+   1119  f623		       60		      rts
+   1120  f624
+   1121  f624				   LaserCollision SUBROUTINE
+   1122  f624							;lda JoyFire
+   1123  f624							;beq .Return
+   1124  f624
+   1125  f624		       a9 00		      lda	#0
+   1126  f626		       85 83		      sta	Temp
+   1127  f628
+   1128  f628		       a0 0a		      ldy	#MAX_ROWS-1
+   1129  f62a				   .Loop
+   1130  f62a		       b9 98 00 	      lda	Sprites0,y
+   1131  f62d		       f0 18		      beq	.Continue
+   1132  f62f
+   1133  f62f							; detect if laser > enemy left edge
+   1134  f62f		       b9 c4 00 	      lda	PosX0,y
+   1135  f632		       38		      sec
+   1136  f633		       e9 04		      sbc	#4	; -4 adjust offset
+   1137  f635		       c5 97		      cmp	PlyrPosX
+   1138  f637		       b0 0e		      bcs	.Continue
+   1139  f639
+   1140  f639							; detect if laser < enemy right edge
+   1141  f639		       18		      clc
+   1142  f63a		       69 08		      adc	#8	; +8 enemy width
+   1143  f63c		       c5 97		      cmp	PlyrPosX
+   1144  f63e		       90 07		      bcc	.Continue
+   1145  f640
+   1146  f640							; hit
+   1147  f640		       a9 00		      lda	#<BlankGfx
+   1148  f642		       99 98 00 	      sta	Sprites0,y
+   1149  f645		       e6 83		      inc	Temp
+   1150  f647
+   1151  f647				   .Continue
+   1152  f647		       88		      dey
+   1153  f648		       d0 e0		      bne	.Loop
+   1154  f64a
+   1155  f64a							; update the score
+   1156  f64a		       f8		      sed
+   1157  f64b		       a4 83		      ldy	Temp
+   1158  f64d		       f0 16		      beq	.Return
+   1159  f64f				   .Score
+   1160  f64f		       18		      clc
+   1161  f650		       a5 93		      lda	Score+2
+   1162  f652		       69 25		      adc	#$25
+   1163  f654		       85 93		      sta	Score+2
+   1164  f656
+   1165  f656		       a5 92		      lda	Score+1
+   1166  f658		       69 00		      adc	#$00
+   1167  f65a		       85 92		      sta	Score+1
+   1168  f65c
+   1169  f65c		       a5 91		      lda	Score
+   1170  f65e		       69 00		      adc	#$00
+   1171  f660		       85 91		      sta	Score
+   1172  f662
+   1173  f662		       88		      dey
+   1174  f663		       d0 ea		      bne	.Score
+   1175  f665
+   1176  f665				   .Return
+   1177  f665		       d8		      cld
+   1178  f666		       60		      rts
+   1179  f667
+   1180  f667				   SpritePtrsClear SUBROUTINE
+   1181  f667		       a9 00		      lda	#<BlankGfx
+   1182  f669		       a2 fc		      ldx	#>BlankGfx
+   1183  f66b		       a0 0a		      ldy	#MAX_NUM_PTRS*2-2
+   1184  f66d				   .Gfx
+   1185  f66d		       99 85 00 	      sta	SpritePtrs,y
+   1186  f670		       96 86		      stx	SpritePtrs+1,y
+   1187  f672		       88		      dey
+   1188  f673		       88		      dey
+   1189  f674		       10 f7		      bpl	.Gfx
+   1190  f676		       60		      rts
+   1191  f677
+   1192  f677				   ShipUpdatePosition SUBROUTINE
+   1193  f677							; update player's vertical position
+   1194  f677		       a5 94		      lda	ScreenPosY
+   1195  f679		       18		      clc
+   1196  f67a		       65 95		      adc	ScreenSpeedY
+   1197  f67c		       85 94		      sta	ScreenPosY
+   1198  f67e
+   1199  f67e							; update player's horizontal position
+   1200  f67e		       a5 97		      lda	PlyrPosX
+   1201  f680		       18		      clc
+   1202  f681		       65 96		      adc	PlyrSpeedX
+   1203  f683		       c9 95		      cmp	#MAX_POS_X
+   1204  f685		       b0 09		      bcs	.HaltShip
+   1205  f687		       c9 22		      cmp	#MIN_POS_X
+   1206  f689		       90 05		      bcc	.HaltShip
+   1207  f68b		       85 97		      sta	PlyrPosX
+   1208  f68d		       4c 94 f6 	      jmp	.Return
+   1209  f690				   .HaltShip
+   1210  f690		       a9 00		      lda	#0
+   1211  f692		       85 96		      sta	PlyrSpeedX
+   1212  f694
+   1213  f694				   .Return
+   1214  f694		       60		      rts
+   1215  f695
+   1216  f695				   EnemiesUpdatePosition SUBROUTINE
+   1217  f695		       a0 0a		      ldy	#MAX_ROWS-1
+   1218  f697				   .Enemies
+   1219  f697		       b9 98 00 	      lda	Sprites0,y
+   1220  f69a		       f0 20		      beq	.Continue
+   1221  f69c
+   1222  f69c		       b9 c4 00 	      lda	PosX0,y
+   1223  f69f		       18		      clc
+   1224  f6a0		       79 ae 00 	      adc	SpeedX0,y
+   1225  f6a3		       c9 95		      cmp	#MAX_POS_X
+   1226  f6a5		       b0 0a		      bcs	.Reverse
+   1227  f6a7		       c9 22		      cmp	#MIN_POS_X
+   1228  f6a9		       90 06		      bcc	.Reverse
+   1229  f6ab		       99 c4 00 	      sta	PosX0,y
+   1230  f6ae		       4c bc f6 	      jmp	.Continue
+   1231  f6b1				   .Reverse
+   1232  f6b1							; flip the sign; positive <--> negative
+   1233  f6b1		       b9 ae 00 	      lda	SpeedX0,y
+   1234  f6b4		       49 ff		      eor	#$ff
+   1235  f6b6		       18		      clc
+   1236  f6b7		       69 01		      adc	#1
+   1237  f6b9		       99 ae 00 	      sta	SpeedX0,y
+   1238  f6bc
+   1239  f6bc				   .Continue
+   1240  f6bc		       88		      dey
+   1241  f6bd		       d0 d8		      bne	.Enemies
+   1242  f6bf
+   1243  f6bf		       60		      rts
+   1244  f6c0
+   1245  f6c0				   UpdateVerticalPositions SUBROUTINE
+   1246  f6c0		       60		      rts
+   1247  f6c1
+   1248  f6c1							; -----------------------------------------------------------------------------
+   1249  f6c1							; Desc:     Positions an object horizontally using the Battlezone algorithm.
+   1250  f6c1							; Input:    A register (screen pixel position)
+   1251  f6c1							;	     X register (object index: 0 to 4)
+   1252  f6c1							; Output:   A register (fine positioning value)
+   1253  f6c1							;
+   1254  f6c1							;	     Object indexes:
+   1255  f6c1							;		 0 = Player 0
+   1256  f6c1							;		 1 = Player 1
+   1257  f6c1							;		 2 = Missile 0
+   1258  f6c1							;		 3 = Missile 1
+   1259  f6c1							;		 4 = Ball
+   1260  f6c1							;
+   1261  f6c1							;	     Follow up with:
+   1262  f6c1							;		 sta WSYNC
+   1263  f6c1							;		 sta HMOVE
+   1264  f6c1							; -----------------------------------------------------------------------------
+   1265  f6c1				   HorizPosition SUBROUTINE
+   1266  f6c1		       38		      sec		; 2 (2)
+   1267  f6c2		       85 02		      sta	WSYNC
+   1268  f6c4
+   1269  f6c4							; coarse position timing
+   1270  f6c4				   .Div15
+   1271  f6c4		       e9 0f		      sbc	#15	; 2 (2)
+   1272  f6c6		       b0 fc		      bcs	.Div15	; 3 (5)
+   1273  f6c8
+   1274  f6c8							; computing fine positioning value
+   1275  f6c8		       49 07		      eor	#7	; 2 (11)	     ; 4 bit signed subtraction
+   1276  f6ca		       0a		      asl		; 2 (13)
+   1277  f6cb		       0a		      asl		; 2 (15)
+   1278  f6cc		       0a		      asl		; 2 (17)
+   1279  f6cd		       0a		      asl		; 2 (19)
+   1280  f6ce
+   1281  f6ce							; position
+   1282  f6ce		       95 10		      sta	RESP0,X	; 4 (23)	     ; coarse position
+   1283  f6d0		       95 20		      sta	HMP0,X	; 4 (27)	     ; fine position
+   1284  f6d2		       60		      rts
+   1285  f6d3
+   1286  f6d3							; performs horizontal positioning while drawing a background color
+   1287  f6d3				   HorizPositionBG SUBROUTINE
+   1288  f6d3		       38		      sec		; 2 (8)
+   1289  f6d4		       85 02		      sta	WSYNC	; 3 (11)
+   1290  f6d6		       84 09		      sty	COLUBK	; 3 (3)
+   1291  f6d8		       e9 0f		      sbc	#15	; 2 (5)
+   1292  f6da
+   1293  f6da				   .Div15
+   1294  f6da		       e9 0f		      sbc	#15	; 2 (2)
+   1295  f6dc		       b0 fc		      bcs	.Div15	; 3 (5)
+   1296  f6de
+   1297  f6de		       49 07		      eor	#7	; 2 (11)
+   1298  f6e0		       0a		      asl		; 2 (13)
+   1299  f6e1		       0a		      asl		; 2 (15)
+   1300  f6e2		       0a		      asl		; 2 (17)
+   1301  f6e3		       0a		      asl		; 2 (19)
+   1302  f6e4
+   1303  f6e4		       95 10		      sta	RESP0,X	; 4 (23)
+   1304  f6e6		       95 20		      sta	HMP0,X	; 4 (27)
+   1305  f6e8		       60		      rts
+   1306  f6e9
+   1307  f6e9							; performs horizontal positioning while drawing a playfield pattern
+   1308  f6e9				   F			; this must enter on or before cycle 62
+   1309  f6e9				   HorizPositionPF SUBROUTINE
+   1310  f6e9		       84 0d		      sty	PF0	; 3 (65)
+   1311  f6eb		       38		      sec		; 2 (67)
+   1312  f6ec		       84 0e		      sty	PF1	; 3 (70)
+   1313  f6ee		       84 0f		      sty	PF2	; 3 (73)
+   1314  f6f0		       85 02		      sta	WSYNC	; 3 (76)
+   1315  f6f2
+   1316  f6f2				   .Div15
+   1317  f6f2		       e9 0f		      sbc	#15	; 4 (7)
+   1318  f6f4		       b0 fc		      bcs	.Div15	; 5 (12)
+   1319  f6f6
+   1320  f6f6		       49 07		      eor	#7	; 2 (14)
+   1321  f6f8		       0a		      asl		; 2 (16)
+   1322  f6f9		       0a		      asl		; 2 (18)
+   1323  f6fa		       0a		      asl		; 2 (20)
+   1324  f6fb		       0a		      asl		; 2 (22)
+   1325  f6fc
+   1326  f6fc		       95 10		      sta	RESP0,X	; 4 (26)
+   1327  f6fe		       95 20		      sta	HMP0,X	; 4 (30)
+   1328  f700		       60		      rts
+   1329  f701
+   1330  f701				   PlayAudio  SUBROUTINE
+   1331  f701							; play laser sounds
+   1332  f701		       a5 da		      lda	JoyFire
+   1333  f703		       d0 0b		      bne	.LaserSound
+   1334  f705		       85 db		      sta	LaserAudioFrame
+   1335  f707		       85 16		      sta	AUDC1
+   1336  f709		       85 1a		      sta	AUDV1
+   1337  f70b		       85 18		      sta	AUDF1
+   1338  f70d		       4c 2a f7 	      jmp	.EngineSound
+   1339  f710
+   1340  f710				   .LaserSound
+   1341  f710		       a4 db		      ldy	LaserAudioFrame
+   1342  f712		       c8		      iny
+   1343  f713		       c0 09		      cpy	#LASER_AUDIO_FRAMES
+   1344  f715		       90 02		      bcc	.Save
+   1345  f717		       a0 00		      ldy	#0
+   1346  f719				   .Save
+   1347  f719		       84 db		      sty	LaserAudioFrame
+   1348  f71b		       b9 24 fd 	      lda	LaserCon,y
+   1349  f71e		       85 16		      sta	AUDC1
+   1350  f720		       b9 24 fd 	      lda	LaserVol,y
+   1351  f723		       85 1a		      sta	AUDV1
+   1352  f725		       b9 2d fd 	      lda	LaserFreq,y
+   1353  f728		       85 18		      sta	AUDF1
+   1354  f72a
+   1355  f72a							; play engine sounds
+   1356  f72a				   .EngineSound
+   1357  f72a		       a9 08		      lda	#8
+   1358  f72c		       85 15		      sta	AUDC0
+   1359  f72e		       a5 95		      lda	ScreenSpeedY
+   1360  f730		       10 05		      bpl	.NoInvert
+   1361  f732		       49 ff		      eor	#$ff
+   1362  f734		       18		      clc
+   1363  f735		       69 01		      adc	#1
+   1364  f737				   .NoInvert
+   1365  f737					      REPEAT	FPOINT_SCALE
+   1366  f737		       4a		      lsr
+   1367  f738					      REPEND
+   1368  f738		       a8		      tay
+   1369  f739		       b9 14 fd 	      lda	EngineVolume,y
+   1370  f73c		       85 19		      sta	AUDV0
+   1371  f73e		       b9 1c fd 	      lda	EngineFrequency,y
+   1372  f741		       85 17		      sta	AUDF0
+   1373  f743
+   1374  f743		       60		      rts
+   1375  f744
+   1376  f744				   SpawnSprite SUBROUTINE
+   1377  f744							; if motionless, do nothing
+   1378  f744							; if traveling forward when Y = 0, then spawn a new top row
+   1379  f744							; if traveling backward when Y = 15, then spawn a new bottom row
+   1380  f744		       a5 95		      lda	ScreenSpeedY
+   1381  f746		       f0 29		      beq	.Return
+   1382  f748		       30 16		      bmi	.Reverse
+   1383  f74a
+   1384  f74a				   .Foward
+   1385  f74a		       a5 94		      lda	ScreenPosY
+   1386  f74c		       c9 10		      cmp	#PF_ROW_HEIGHT
+   1387  f74e		       90 21		      bcc	.Return
+   1388  f750		       38		      sec
+   1389  f751		       e9 10		      sbc	#PF_ROW_HEIGHT
+   1390  f753		       85 94		      sta	ScreenPosY
+   1391  f755		       20 72 f7 	      jsr	SpritesShiftDown
+   1392  f758		       20 c8 f7 	      jsr	SpawnInTop
+   1393  f75b		       a0 0a		      ldy	#MAX_ROWS-1
+   1394  f75d		       4c 71 f7 	      jmp	.Return
+   1395  f760
+   1396  f760				   .Reverse
+   1397  f760		       a5 94		      lda	ScreenPosY
+   1398  f762		       10 0d		      bpl	.Return
+   1399  f764		       18		      clc
+   1400  f765		       69 10		      adc	#PF_ROW_HEIGHT
+   1401  f767		       85 94		      sta	ScreenPosY
+   1402  f769		       20 9e f7 	      jsr	SpritesShiftUp
+   1403  f76c		       20 dc f7 	      jsr	SpawnInBottom
+   1404  f76f		       a0 00		      ldy	#0
+   1405  f771
+   1406  f771				   .Return
+   1407  f771		       60		      rts
+   1408  f772
+   1409  f772				   SpritesShiftDown SUBROUTINE
+   1410  f772							; shift rows down
+   1411  f772		       a0 01		      ldy	#1
+   1412  f774				   .ShiftDown
+   1413  f774		       b9 99 00 	      lda	Sprites0+1,y
+   1414  f777		       99 98 00 	      sta	Sprites0,y
+   1415  f77a		       b9 a4 00 	      lda	Sprites1+1,y
+   1416  f77d		       99 a3 00 	      sta	Sprites1,y
+   1417  f780		       b9 af 00 	      lda	SpeedX0+1,y
+   1418  f783		       99 ae 00 	      sta	SpeedX0,y
+   1419  f786		       b9 ba 00 	      lda	SpeedX1+1,y
+   1420  f789		       99 b9 00 	      sta	SpeedX1,y
+   1421  f78c		       b9 c5 00 	      lda	PosX0+1,y
+   1422  f78f		       99 c4 00 	      sta	PosX0,y
+   1423  f792		       b9 d0 00 	      lda	PosX1+1,y
+   1424  f795		       99 cf 00 	      sta	PosX1,y
+   1425  f798		       c8		      iny
+   1426  f799		       c0 0a		      cpy	#MAX_ROWS-1
+   1427  f79b		       d0 d7		      bne	.ShiftDown
+   1428  f79d		       60		      rts
+   1429  f79e
+   1430  f79e				   SpritesShiftUp SUBROUTINE
+   1431  f79e							; shift rows up
+   1432  f79e		       a0 0a		      ldy	#MAX_ROWS-1
+   1433  f7a0				   .ShiftUp
+   1434  f7a0		       b9 97 00 	      lda	Sprites0-1,y
+   1435  f7a3		       99 98 00 	      sta	Sprites0,y
+   1436  f7a6		       b9 a2 00 	      lda	Sprites1-1,y
+   1437  f7a9		       99 a3 00 	      sta	Sprites1,y
+   1438  f7ac		       b9 ad 00 	      lda	SpeedX0-1,y
+   1439  f7af		       99 ae 00 	      sta	SpeedX0,y
+   1440  f7b2		       b9 b8 00 	      lda	SpeedX1-1,y
+   1441  f7b5		       99 b9 00 	      sta	SpeedX1,y
+   1442  f7b8		       b9 c3 00 	      lda	PosX0-1,y
+   1443  f7bb		       99 c4 00 	      sta	PosX0,y
+   1444  f7be		       b9 ce 00 	      lda	PosX1-1,y
+   1445  f7c1		       99 cf 00 	      sta	PosX1,y
+   1446  f7c4		       88		      dey
+   1447  f7c5		       d0 d9		      bne	.ShiftUp
+   1448  f7c7		       60		      rts
+   1449  f7c8
+   1450  f7c8				   SpawnInTop SUBROUTINE
+   1451  f7c8							; Spawn in alternating rows, so the adjacent row can't be occupied.
+   1452  f7c8		       a9 20		      lda	#<FighterGfx
+   1453  f7ca		       85 a2		      sta	Sprites0+MAX_ROWS-1
+   1454  f7cc		       ad 84 02 	      lda	INTIM
+   1455  f7cf		       09 20		      ora	#%00100000
+   1456  f7d1		       85 ce		      sta	PosX0+MAX_ROWS-1
+   1457  f7d3		       a9 01		      lda	#1
+   1458  f7d5		       85 b8		      sta	SpeedX0+MAX_ROWS-1
+   1459  f7d7
+   1460  f7d7		       a9 53		      lda	#<FuelGfx
+   1461  f7d9		       85 ad		      sta	Sprites1+MAX_ROWS-1
+   1462  f7db		       60		      rts
+   1463  f7dc
+   1464  f7dc				   SpawnInBottom SUBROUTINE
+   1465  f7dc							; Spawn in alternating rows, so the adjacent row can't be occupied.
+   1466  f7dc		       a9 20		      lda	#<FighterGfx
+   1467  f7de		       85 98		      sta	Sprites0
+   1468  f7e0		       ad 84 02 	      lda	INTIM
+   1469  f7e3		       09 40		      ora	#%01000000
+   1470  f7e5		       85 c4		      sta	PosX0
+   1471  f7e7		       a9 ff		      lda	#-1
+   1472  f7e9		       85 ae		      sta	SpeedX0
+   1473  f7eb
+   1474  f7eb		       a9 31		      lda	#<CondoGfx
+   1475  f7ed		       85 a3		      sta	Sprites1
+   1476  f7ef		       60		      rts
+   1477  f7f0
+   1478  f7f0							;SpawnTop SUBROUTINE
+   1479  f7f0							;    ; shift rows down
+   1480  f7f0							;    ldy #1
+   1481  f7f0							;.ShiftDown
+   1482  f7f0							;    lda Sprites0+1,y
+   1483  f7f0							;    sta Sprites0,y
+   1484  f7f0							;
+   1485  f7f0							;    lda Sprites1+1,y
+   1486  f7f0							;    sta Sprites1,y
+   1487  f7f0							;
+   1488  f7f0							;    lda SpeedX0+1,y
+   1489  f7f0							;    sta SpeedX0,y
+   1490  f7f0							;
+   1491  f7f0							;    lda SpeedX1+1,y
+   1492  f7f0							;    sta SpeedX1,y
+   1493  f7f0							;
+   1494  f7f0							;    lda PosX0+1,y
+   1495  f7f0							;    sta PosX0,y
+   1496  f7f0							;
+   1497  f7f0							;    lda PosX1+1,y
+   1498  f7f0							;    sta PosX1,y
+   1499  f7f0							;
+   1500  f7f0							;    iny
+   1501  f7f0							;    cpy #MAX_ROWS-1
+   1502  f7f0							;    bne .ShiftDown
+   1503  f7f0							;
+   1504  f7f0							;    ; load blank
+   1505  f7f0							;    lda #<BlankGfx
+   1506  f7f0							;    sta Sprites0+MAX_ROWS-1
+   1507  f7f0							;    sta Sprites1+MAX_ROWS-1
+   1508  f7f0							;    lda #0
+   1509  f7f0							;    sta SpeedX0+MAX_ROWS-1
+   1510  f7f0							;    sta SpeedX1+MAX_ROWS-1
+   1511  f7f0							;    sta PosX0+MAX_ROWS-1
+   1512  f7f0							;    sta PosX1+MAX_ROWS-1
+   1513  f7f0							;
+   1514  f7f0							;    ; spawn replacements
+   1515  f7f0							;    lda FrameCtr
+   1516  f7f0							;    and #$0f
+   1517  f7f0							;    cmp #8
+   1518  f7f0							;    bcs .Blank1
+   1519  f7f0							;    lda #<FighterGfx
+   1520  f7f0							;    sta Sprites0+MAX_ROWS-1
+   1521  f7f0							;    lda ScreenPosY
+   1522  f7f0							;    asl
+   1523  f7f0							;    adc #50
+   1524  f7f0							;    sta PosX0+MAX_ROWS-1
+   1525  f7f0							;    lda #1
+   1526  f7f0							;    sta SpeedX0+MAX_ROWS-1
+   1527  f7f0							;.Blank1
+   1528  f7f0							;
+   1529  f7f0							;    lda FrameCtr
+   1530  f7f0							;    eor INTIM
+   1531  f7f0							;    and #3
+   1532  f7f0							;    tax
+   1533  f7f0							;    lda Buildings,x
+   1534  f7f0							;    sta Sprites1+MAX_ROWS-1
+   1535  f7f0							;    bcc .Blank2
+   1536  f7f0							;    lda FrameCtr
+   1537  f7f0							;    and #%00011111
+   1538  f7f0							;    adc #90
+   1539  f7f0							;    sta PosX1+MAX_ROWS-1
+   1540  f7f0							;.Blank2
+   1541  f7f0							;    rts
+   1542  f7f0							;
+   1543  f7f0							;SpawnBottom SUBROUTINE
+   1544  f7f0							;    ; shift rows up
+   1545  f7f0							;    ldy #MAX_ROWS-1
+   1546  f7f0							;.ShiftUp
+   1547  f7f0							;    lda Sprites0-1,y
+   1548  f7f0							;    sta Sprites0,y
+   1549  f7f0							;    lda Sprites1-1,y
+   1550  f7f0							;    sta Sprites1,y
+   1551  f7f0							;    lda SpeedX0-1,y
+   1552  f7f0							;    sta SpeedX0,y
+   1553  f7f0							;    lda SpeedX1-1,y
+   1554  f7f0							;    sta SpeedX1,y
+   1555  f7f0							;    lda PosX0-1,y
+   1556  f7f0							;    sta PosX0,y
+   1557  f7f0							;    lda PosX1-1,y
+   1558  f7f0							;    sta PosX1,y
+   1559  f7f0							;
+   1560  f7f0							;    dey
+   1561  f7f0							;    cpy #1
+   1562  f7f0							;    bne .ShiftUp
+   1563  f7f0							;
+   1564  f7f0							;    lda #<BlankGfx
+   1565  f7f0							;    sta Sprites0+1
+   1566  f7f0							;    sta Sprites1+1
+   1567  f7f0							;    lda #0
+   1568  f7f0							;    sta SpeedX0+1
+   1569  f7f0							;    sta SpeedX1+1
+   1570  f7f0							;    sta PosX0+1
+   1571  f7f0							;    sta PosX1+1
+   1572  f7f0							;
+   1573  f7f0							;    ; spawn replacements
+   1574  f7f0							;    lda FrameCtr
+   1575  f7f0							;    and #$0f
+   1576  f7f0							;    cmp #8
+   1577  f7f0							;    bcs .Blank1
+   1578  f7f0							;    lda #<FighterGfx
+   1579  f7f0							;    sta Sprites0+1
+   1580  f7f0							;    lda ScreenPosY
+   1581  f7f0							;    asl
+   1582  f7f0							;    adc #75
+   1583  f7f0							;    sta PosX0+1
+   1584  f7f0							;    lda #1
+   1585  f7f0							;    sta SpeedX0+1
+   1586  f7f0							;.Blank1
+   1587  f7f0							;
+   1588  f7f0							;    lda FrameCtr
+   1589  f7f0							;    eor INTIM
+   1590  f7f0							;    and #3
+   1591  f7f0							;    tax
+   1592  f7f0							;    lda Buildings,x
+   1593  f7f0							;    sta Sprites1+1
+   1594  f7f0							;    beq .Blank2
+   1595  f7f0							;    lda FrameCtr
+   1596  f7f0							;    and #%00011111
+   1597  f7f0							;    adc #90
+   1598  f7f0							;    sta PosX1+1
+   1599  f7f0							;.Blank2
+   1600  f7f0							;    rts
+   1601  f7f0
+   1602  f7f0							; -----------------------------------------------------------------------------
+   1603  f7f0							; Data
+   1604  f7f0							; -----------------------------------------------------------------------------
+   1605  fb00					      ORG	ORG_ADDR + $b00
+   1606  fb00
+>>>>>>> Stashed changes
 ------- FILE dat/title-planet.pf LEVEL 2 PASS 2
       0  fb00					      include	"dat/title-planet.pf"
       1  fb00				   TitlePlanetBegin SET	*
@@ -2521,6 +3496,7 @@
      36  fb89		       ab		      dc.b	%10101011
      37  fb8a		       00		      dc.b	%00000000
 ------- FILE proton.asm
+<<<<<<< Updated upstream
    1564  fb8b
    1565  fb8b				   LaserGfx0
    1566  fb8b		       00		      dc.b	%00000000
@@ -2768,6 +3744,265 @@
    1807  fcd0				   Buildings
    1808  fcd0		       00 40 50 60	      dc.b	<BlankGfx, <CondoGfx, <BaseGfx, <FuelGfx
    1809  fcd4
+=======
+   1612  fb8b
+   1613  fb8b				   LaserGfx0
+   1614  fb8b		       00		      dc.b	%00000000
+   1615  fb8c		       82		      dc.b	%10000010
+   1616  fb8d		       54		      dc.b	%01010100
+   1617  fb8e		       28		      dc.b	%00101000
+   1618  fb8f		       fe		      dc.b	%11111110
+   1619  fb90		       28		      dc.b	%00101000
+   1620  fb91		       54		      dc.b	%01010100
+   1621  fb92		       82		      dc.b	%10000010
+   1622  fb93				   LaserGfx1
+   1623  fb93		       00		      dc.b	%00000000
+   1624  fb94		       10		      dc.b	%00010000
+   1625  fb95		       54		      dc.b	%01010100
+   1626  fb96		       28		      dc.b	%00101000
+   1627  fb97		       38		      dc.b	%00111000
+   1628  fb98		       28		      dc.b	%00101000
+   1629  fb99		       54		      dc.b	%01010100
+   1630  fb9a		       10		      dc.b	%00010000
+   1631  fb9b
+   1632  fc00					      ORG	ORG_ADDR + $c00
+   1633  fc00				   GFX_BEGIN  SET	*
+   1634  fc00
+   1635  fc00							; BlankGfx must be on the page's first byte
+   1636  fc00				   BlankGfx
+   1637  fc00				   ShipGfx
+   1638  fc00		       00 00 00 00*	      ds.b	16, 0
+   1639  fc10				   .Begin
+   1640  fc10		       00		      dc.b	%00000000
+   1641  fc11		       00		      dc.b	%00000000
+   1642  fc12		       7c		      dc.b	%01111100
+   1643  fc13		       7c		      dc.b	%01111100
+   1644  fc14		       d6		      dc.b	%11010110
+   1645  fc15		       ba		      dc.b	%10111010
+   1646  fc16		       fe		      dc.b	%11111110
+   1647  fc17		       fe		      dc.b	%11111110
+   1648  fc18		       fe		      dc.b	%11111110
+   1649  fc19		       fe		      dc.b	%11111110
+   1650  fc1a		       fe		      dc.b	%11111110
+   1651  fc1b		       fe		      dc.b	%11111110
+   1652  fc1c		       d6		      dc.b	%11010110
+   1653  fc1d		       92		      dc.b	%10010010
+   1654  fc1e		       10		      dc.b	%00010000
+   1655  fc1f		       00		      dc.b	%00000000
+   1656  fc1f		       00 10	   SHIP_HEIGHT =	* - .Begin
+   1657  fc20
+   1658  fc20				   FighterGfx
+   1659  fc20		       00		      dc.b	%00000000
+   1660  fc21		       00		      dc.b	%00000000
+   1661  fc22		       00		      dc.b	%00000000
+   1662  fc23		       81		      dc.b	%10000001
+   1663  fc24		       42		      dc.b	%01000010
+   1664  fc25		       a5		      dc.b	%10100101
+   1665  fc26		       c3		      dc.b	%11000011
+   1666  fc27		       ff		      dc.b	%11111111
+   1667  fc28		       e7		      dc.b	%11100111
+   1668  fc29		       e7		      dc.b	%11100111
+   1669  fc2a		       7e		      dc.b	%01111110
+   1670  fc2b		       3c		      dc.b	%00111100
+   1671  fc2c		       5a		      dc.b	%01011010
+   1672  fc2d		       00		      dc.b	%00000000
+   1673  fc2e		       00		      dc.b	%00000000
+   1674  fc2f		       00		      dc.b	%00000000
+   1675  fc2f		       00 10	   FIGHTER_HEIGHT =	* - FighterGfx
+   1676  fc30		       00		      dc.b	TYPE_ENEMY
+   1677  fc31
+   1678  fc31				   CondoGfx
+   1679  fc31		       00		      dc.b	%00000000
+   1680  fc32		       00		      dc.b	%00000000
+   1681  fc33		       7f		      dc.b	%01111111
+   1682  fc34		       7f		      dc.b	%01111111
+   1683  fc35		       55		      dc.b	%01010101
+   1684  fc36		       55		      dc.b	%01010101
+   1685  fc37		       7f		      dc.b	%01111111
+   1686  fc38		       55		      dc.b	%01010101
+   1687  fc39		       55		      dc.b	%01010101
+   1688  fc3a		       7f		      dc.b	%01111111
+   1689  fc3b		       77		      dc.b	%01110111
+   1690  fc3c		       41		      dc.b	%01000001
+   1691  fc3d		       22		      dc.b	%00100010
+   1692  fc3e		       1c		      dc.b	%00011100
+   1693  fc3f		       00		      dc.b	%00000000
+   1694  fc40		       00		      dc.b	%00000000
+   1695  fc40		       00 10	   Condo_HEIGHT =	* - CondoGfx
+   1696  fc41		       01		      dc.b	TYPE_BUILDING
+   1697  fc42
+   1698  fc42				   BaseGfx
+   1699  fc42		       00		      dc.b	%00000000
+   1700  fc43		       00		      dc.b	%00000000
+   1701  fc44		       7e		      dc.b	%01111110
+   1702  fc45		       ff		      dc.b	%11111111
+   1703  fc46		       c3		      dc.b	%11000011
+   1704  fc47		       bd		      dc.b	%10111101
+   1705  fc48		       a5		      dc.b	%10100101
+   1706  fc49		       bd		      dc.b	%10111101
+   1707  fc4a		       a9		      dc.b	%10101001
+   1708  fc4b		       bb		      dc.b	%10111011
+   1709  fc4c		       c3		      dc.b	%11000011
+   1710  fc4d		       3c		      dc.b	%00111100
+   1711  fc4e		       00		      dc.b	%00000000
+   1712  fc4f		       00		      dc.b	%00000000
+   1713  fc50		       00		      dc.b	%00000000
+   1714  fc51		       00		      dc.b	%00000000
+   1715  fc51		       00 10	   BASE_HEIGHT =	* - BaseGfx
+   1716  fc52		       01		      dc.b	TYPE_BUILDING
+   1717  fc53
+   1718  fc53				   FuelGfx
+   1719  fc53		       00		      dc.b	%00000000
+   1720  fc54		       00		      dc.b	%00000000
+   1721  fc55		       3e		      dc.b	%00111110
+   1722  fc56		       7f		      dc.b	%01111111
+   1723  fc57		       63		      dc.b	%01100011
+   1724  fc58		       5d		      dc.b	%01011101
+   1725  fc59		       7f		      dc.b	%01111111
+   1726  fc5a		       63		      dc.b	%01100011
+   1727  fc5b		       5d		      dc.b	%01011101
+   1728  fc5c		       7f		      dc.b	%01111111
+   1729  fc5d		       63		      dc.b	%01100011
+   1730  fc5e		       41		      dc.b	%01000001
+   1731  fc5f		       3e		      dc.b	%00111110
+   1732  fc60		       00		      dc.b	%00000000
+   1733  fc61		       00		      dc.b	%00000000
+   1734  fc62		       00		      dc.b	%00000000
+   1735  fc62		       00 10	   FUEL_HEIGHT =	* - FuelGfx
+   1736  fc63		       01		      dc.b	TYPE_BUILDING
+   1737  fc64
+   1738  fc64				   ExplosionGfx
+   1739  fc64		       00		      dc.b	%00000000
+   1740  fc65		       00		      dc.b	%00000000
+   1741  fc66		       00		      dc.b	%00000000
+   1742  fc67		       81		      dc.b	%10000001
+   1743  fc68		       ca		      dc.b	%11001010
+   1744  fc69		       29		      dc.b	%00101001
+   1745  fc6a		       44		      dc.b	%01000100
+   1746  fc6b		       3b		      dc.b	%00111011
+   1747  fc6c		       54		      dc.b	%01010100
+   1748  fc6d		       cb		      dc.b	%11001011
+   1749  fc6e		       3a		      dc.b	%00111010
+   1750  fc6f		       48		      dc.b	%01001000
+   1751  fc70		       92		      dc.b	%10010010
+   1752  fc71		       00		      dc.b	%00000000
+   1753  fc72		       00		      dc.b	%00000000
+   1754  fc73		       00		      dc.b	%00000000
+   1755  fc73		       00 10	   EXPLOSION_HEIGHT =	* - ExplosionGfx
+   1756  fc74		       02		      dc.b	TYPE_ACTION
+   1757  fc75
+   1758  fc75							; this pattern is generated by ./bin/playfield.exe
+   1759  fc75							; the last byte must be repeated.
+   1760  fc75					      if	1
+   1761  fc75				   PFPattern
+   1762  fc75		       6d e5 b6 0e*	      dc.b	$6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
+   1763  fc7d		       0d 83 09 3a*	      dc.b	$0d, $83, $09, $3a, $a0, $7e, $49, $6d
+   1764  fc7d		       00 10	   PF_ROW_HEIGHT =	* - PFPattern
+   1765  fc85				  -	      else
+   1766  fc85				  -			; test pattern
+   1767  fc85				  -PFPattern
+   1768  fc85				  -	      dc.b	$ff, $00, $00, $00, $00, $00, $00, $00
+   1769  fc85				  -	      dc.b	$00, $00, $00, $00, $00, $00, $00, $ff
+   1770  fc85				  -PF_ROW_HEIGHT =	* - PFPattern
+   1771  fc85					      endif
+   1772  fc85
+   1773  fc85				   Digits
+   1774  fc85				   Digit0
+   1775  fc85		       00		      dc.b	%00000000
+   1776  fc86		       38		      dc.b	%00111000
+   1777  fc87		       6c		      dc.b	%01101100
+   1778  fc88		       66		      dc.b	%01100110
+   1779  fc89		       66		      dc.b	%01100110
+   1780  fc8a		       36		      dc.b	%00110110
+   1781  fc8b		       3c		      dc.b	%00111100
+   1782  fc8b		       00 07	   DIGIT_HEIGHT =	* - Digit0
+   1783  fc8c				   Digit1
+   1784  fc8c		       00		      dc.b	%00000000
+   1785  fc8d		       30		      dc.b	%00110000
+   1786  fc8e		       30		      dc.b	%00110000
+   1787  fc8f		       18		      dc.b	%00011000
+   1788  fc90		       18		      dc.b	%00011000
+   1789  fc91		       1c		      dc.b	%00011100
+   1790  fc92		       0c		      dc.b	%00001100
+   1791  fc93				   Digit2
+   1792  fc93		       00		      dc.b	%00000000
+   1793  fc94		       7c		      dc.b	%01111100
+   1794  fc95		       30		      dc.b	%00110000
+   1795  fc96		       18		      dc.b	%00011000
+   1796  fc97		       0c		      dc.b	%00001100
+   1797  fc98		       66		      dc.b	%01100110
+   1798  fc99		       3c		      dc.b	%00111100
+   1799  fc9a				   Digit3
+   1800  fc9a		       00		      dc.b	%00000000
+   1801  fc9b		       78		      dc.b	%01111000
+   1802  fc9c		       cc		      dc.b	%11001100
+   1803  fc9d		       1c		      dc.b	%00011100
+   1804  fc9e		       0e		      dc.b	%00001110
+   1805  fc9f		       26		      dc.b	%00100110
+   1806  fca0		       1c		      dc.b	%00011100
+   1807  fca1				   Digit4
+   1808  fca1		       00		      dc.b	%00000000
+   1809  fca2		       18		      dc.b	%00011000
+   1810  fca3		       18		      dc.b	%00011000
+   1811  fca4		       0c		      dc.b	%00001100
+   1812  fca5		       fc		      dc.b	%11111100
+   1813  fca6		       66		      dc.b	%01100110
+   1814  fca7		       66		      dc.b	%01100110
+   1815  fca8				   Digit5
+   1816  fca8		       00		      dc.b	%00000000
+   1817  fca9		       78		      dc.b	%01111000
+   1818  fcaa		       cc		      dc.b	%11001100
+   1819  fcab		       0c		      dc.b	%00001100
+   1820  fcac		       78		      dc.b	%01111000
+   1821  fcad		       60		      dc.b	%01100000
+   1822  fcae		       3e		      dc.b	%00111110
+   1823  fcaf				   Digit6
+   1824  fcaf		       00		      dc.b	%00000000
+   1825  fcb0		       3c		      dc.b	%00111100
+   1826  fcb1		       66		      dc.b	%01100110
+   1827  fcb2		       7c		      dc.b	%01111100
+   1828  fcb3		       30		      dc.b	%00110000
+   1829  fcb4		       1c		      dc.b	%00011100
+   1830  fcb5		       06		      dc.b	%00000110
+   1831  fcb6				   Digit7
+   1832  fcb6		       00		      dc.b	%00000000
+   1833  fcb7		       30		      dc.b	%00110000
+   1834  fcb8		       30		      dc.b	%00110000
+   1835  fcb9		       18		      dc.b	%00011000
+   1836  fcba		       0c		      dc.b	%00001100
+   1837  fcbb		       06		      dc.b	%00000110
+   1838  fcbc		       7e		      dc.b	%01111110
+   1839  fcbd				   Digit8
+   1840  fcbd		       00		      dc.b	%00000000
+   1841  fcbe		       78		      dc.b	%01111000
+   1842  fcbf		       cc		      dc.b	%11001100
+   1843  fcc0		       cc		      dc.b	%11001100
+   1844  fcc1		       7e		      dc.b	%01111110
+   1845  fcc2		       26		      dc.b	%00100110
+   1846  fcc3		       3e		      dc.b	%00111110
+   1847  fcc4				   Digit9
+   1848  fcc4		       00		      dc.b	%00000000
+   1849  fcc5		       30		      dc.b	%00110000
+   1850  fcc6		       18		      dc.b	%00011000
+   1851  fcc7		       0c		      dc.b	%00001100
+   1852  fcc8		       3e		      dc.b	%00111110
+   1853  fcc9		       66		      dc.b	%01100110
+   1854  fcca		       3c		      dc.b	%00111100
+   1855  fccb
+   1856  fccb				  -	      IF	>GFX_BEGIN != >*
+   1857  fccb				  -	      ECHO	"(1) Graphics crossed a page boundary!", (GFX_BEGIN&$ff00), (*&$ff00)
+   1858  fccb					      ENDIF
+ Page $fc00 has 53 bytes remaining
+   1859  fccb					      ECHO	"Page", (GFX_BEGIN&$ff00 ), "has", (((GFX_BEGIN+$100)&$ff00)-*)d, "bytes remaining"
+   1860  fccb
+   1861  fccb				   DigitTable
+   1862  fccb		       85 8c 93 9a*	      dc.b	<Digit0, <Digit1, <Digit2, <Digit3, <Digit4
+   1863  fcd0		       a8 af b6 bd*	      dc.b	<Digit5, <Digit6, <Digit7, <Digit8, <Digit9
+   1864  fcd5
+   1865  fcd5				   Buildings
+   1866  fcd5		       00 31 42 53	      dc.b	<BlankGfx, <CondoGfx, <BaseGfx, <FuelGfx
+   1867  fcd9
+>>>>>>> Stashed changes
 ------- FILE lib/ntsc.asm LEVEL 2 PASS 2
       0  fcd4					      include	"lib/ntsc.asm"
       1  fcd4							; -----------------------------------------------------------------------------
@@ -2912,6 +4147,7 @@
      23  fd0f				  -
      24  fd0f					      endif
 ------- FILE proton.asm
+<<<<<<< Updated upstream
    1812  fd0f
    1813  fd0f							; -----------------------------------------------------------------------------
    1814  fd0f							; Audio data
@@ -3056,11 +4292,149 @@
    1910  ff2f		       86 0e		      stx	PF1	; 3 (5)
    1911  ff31		       86 0f		      stx	PF2	; 3 (8)
    1912  ff33		       98		      tya		; 2 (10)
+=======
+   1870  fd14
+   1871  fd14							; -----------------------------------------------------------------------------
+   1872  fd14							; Audio data
+   1873  fd14							; -----------------------------------------------------------------------------
+   1874  fd14				   EngineVolume SUBROUTINE
+   1875  fd14				   .range     SET	[MAX_SPEED_Y>>FPOINT_SCALE]+1
+   1876  fd14				   .val       SET	0
+   1877  fd14				   .max       SET	6
+   1878  fd14				   .min       SET	2
+   1879  fd14					      REPEAT	.range
+   1880  fd14		       02		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd14				   .val       SET	.val + 1
+   1879  fd14					      REPEND
+   1880  fd15		       02		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd15				   .val       SET	.val + 1
+   1879  fd15					      REPEND
+   1880  fd16		       03		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd16				   .val       SET	.val + 1
+   1879  fd16					      REPEND
+   1880  fd17		       03		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd17				   .val       SET	.val + 1
+   1879  fd17					      REPEND
+   1880  fd18		       04		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd18				   .val       SET	.val + 1
+   1879  fd18					      REPEND
+   1880  fd19		       04		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd19				   .val       SET	.val + 1
+   1879  fd19					      REPEND
+   1880  fd1a		       05		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd1a				   .val       SET	.val + 1
+   1879  fd1a					      REPEND
+   1880  fd1b		       05		      dc.b	[.val * [.max - .min]] / .range + .min
+   1881  fd1b				   .val       SET	.val + 1
+   1882  fd1c					      REPEND
+   1883  fd1c
+   1884  fd1c				   EngineFrequency SUBROUTINE
+   1885  fd1c				   .range     SET	[MAX_SPEED_Y>>FPOINT_SCALE]+1
+   1886  fd1c				   .val       SET	.range
+   1887  fd1c				   .max       SET	31
+   1888  fd1c				   .min       SET	7
+   1889  fd1c					      REPEAT	.range
+   1890  fd1c		       1f		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd1c				   .val       SET	.val - 1
+   1889  fd1c					      REPEND
+   1890  fd1d		       1c		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd1d				   .val       SET	.val - 1
+   1889  fd1d					      REPEND
+   1890  fd1e		       19		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd1e				   .val       SET	.val - 1
+   1889  fd1e					      REPEND
+   1890  fd1f		       16		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd1f				   .val       SET	.val - 1
+   1889  fd1f					      REPEND
+   1890  fd20		       13		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd20				   .val       SET	.val - 1
+   1889  fd20					      REPEND
+   1890  fd21		       10		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd21				   .val       SET	.val - 1
+   1889  fd21					      REPEND
+   1890  fd22		       0d		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd22				   .val       SET	.val - 1
+   1889  fd22					      REPEND
+   1890  fd23		       0a		      dc.b	[.val * [.max - .min]] / .range + .min
+   1891  fd23				   .val       SET	.val - 1
+   1892  fd24					      REPEND
+   1893  fd24
+   1894  fd24		       00 01	   LASER_AUDIO_RATE =	%00000001
+   1895  fd24		       00 09	   LASER_AUDIO_FRAMES =	9
+   1896  fd24
+   1897  fd24				   LaserVol
+   1898  fd24					      ds.b	0, 6, 8, 6, 8, 6, 8, 6, 0
+   1899  fd24				   LaserCon
+   1900  fd24		       08 08 08 08*	      dc.b	$8, $8, $8, $8, $8, $8, $8, $8, $8
+   1901  fd2d				   LaserFreq
+   1902  fd2d		       00 01 00 01*	      dc.b	0, 1, 0, 1, 0, 1, 0, 1, 0
+   1903  fd36
+   1904  fd36							; Procedure tables
+   1905  fd36				   ModeVertBlank
+   1906  fd36		       68 f0		      dc.w	TitleVertBlank	; MODE_TITLE
+   1907  fd38		       2c f2		      dc.w	GameVertBlank	; MODE_GAME
+   1908  fd3a				   ModeKernel
+   1909  fd3a		       aa f0		      dc.w	TitleKernel	; MODE_TITLE
+   1910  fd3c		       9d f2		      dc.w	GameKernel	; MODE_GAME
+   1911  fd3e				   ModeOverscan
+   1912  fd3e		       f4 f1		      dc.w	TitleOverscan	; MODE_TITLE
+   1913  fd40		       df f2		      dc.w	GameOverscan	; MODE_GAME
+   1914  fd42
+ Page $fd00 has 66 bytes remaining
+   1915  fd42					      ECHO	"Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
+   1916  fd42
+   1917  ff00					      ORG	ORG_ADDR + $f00
+   1918  ff00							; -----------------------------------------------------------------------------
+   1919  ff00							; Desc:     Draws a 48-bit wide sprite centered on the screen.
+   1920  ff00							;	     Position GRP0 to pixel 56 (TIA cycle 124).
+   1921  ff00							;	     Position GRP1 to pixel 64 (TIA cycle 132).
+   1922  ff00							; Input:    Y register (height-1)
+   1923  ff00							; Output:
+   1924  ff00							; -----------------------------------------------------------------------------
+   1925  ff00				   KERNEL_BEGIN SET	*
+   1926  ff00				   DrawWideSprite56 SUBROUTINE		; 6 (6)
+   1927  ff00		       84 83		      sty	Temp	; 3 (9)
+   1928  ff02				   .Loop
+   1929  ff02							;			      CPU   TIA   GRP0	GRP0A	 GRP1  GRP1A
+   1930  ff02							; -------------------------------------------------------------------------
+   1931  ff02		       a4 83		      ldy	Temp	; 3 (65)  (195)
+   1932  ff04		       b1 85		      lda	(SpritePtrs),y	; 5 (70)  (210)
+   1933  ff06		       85 1b		      sta	GRP0	; 3 (73)  (219)    D1	   --	   --	  --
+   1934  ff08		       85 02		      sta	WSYNC	; 3  (0)    (0)
+   1935  ff0a							; -------------------------------------------------------------------------
+   1936  ff0a		       b1 87		      lda	(SpritePtrs+2),y	; 5  (5)   (15)
+   1937  ff0c		       85 1c		      sta	GRP1	; 3  (8)   (24)    D1	   D1	   D2	  --
+   1938  ff0e		       b1 89		      lda	(SpritePtrs+4),y	; 5 (13)   (39)
+   1939  ff10		       85 1b		      sta	GRP0	; 3 (16)   (48)    D3	   D1	   D2	  D2
+   1940  ff12		       b1 8b		      lda	(SpritePtrs+6),y	; 5 (21)   (63)
+   1941  ff14		       85 84		      sta	Temp2	; 3 (24)   (72)
+   1942  ff16		       b1 8d		      lda	(SpritePtrs+8),y	; 5 (29)   (87)
+   1943  ff18		       aa		      tax		; 2 (31)   (93)
+   1944  ff19		       b1 8f		      lda	(SpritePtrs+10),y	; 5 (36)  (108)
+   1945  ff1b		       a8		      tay		; 2 (38)  (114)
+   1946  ff1c		       a5 84		      lda	Temp2	; 3 (41)  (123)	     !
+   1947  ff1e		       85 1c		      sta	GRP1	; 3 (44)  (132)    D3	   D3	   D4	  D2!
+   1948  ff20		       86 1b		      stx	GRP0	; 3 (47)  (141)    D5	   D3!	   D4	  D4
+   1949  ff22		       84 1c		      sty	GRP1	; 3 (50)  (150)    D5	   D5	   D6	  D4!
+   1950  ff24		       85 1b		      sta	GRP0	; 3 (53)  (159)    D4*    D5!	   D6	  D6
+   1951  ff26		       c6 83		      dec	Temp	; 5 (58)  (174)			    !
+   1952  ff28		       10 d8		      bpl	.Loop	; 3 (61)  (183) 
+   1953  ff2a		       60		      rts		; 6 (67)
+   1954  ff2b
+   1955  ff2b							; positioned on pixel 4 (TIA 72) and 12 (TIA 80)
+   1956  ff2b				   DrawTitleSprite SUBROUTINE
+   1957  ff2b		       85 02		      sta	WSYNC
+   1958  ff2d		       a2 ff		      ldx	#$ff	; 2 (2)
+   1959  ff2f		       86 0e		      stx	PF1	; 3 (5)
+   1960  ff31		       86 0f		      stx	PF2	; 3 (8)
+   1961  ff33		       98		      tya		; 2 (10)
+>>>>>>> Stashed changes
       0  ff34					      SLEEP_26		; 26 (36)
       1  ff34		       a0 04		      ldy	#4
       2  ff36				   .Sleep
       3  ff36		       88		      dey
       4  ff37		       10 fd		      bpl	.Sleep
+<<<<<<< Updated upstream
    1914  ff39		       a8		      tay		; 2 (38)
    1915  ff3a		       ae 00 fb 	      ldx	TitlePlanet1	; 3 (41)
    1916  ff3d		       86 0e		      stx	PF1	; 3 (44)
@@ -3215,3 +4589,137 @@
    2064  fffa		       00 f0		      dc.w	Reset	; NMI
    2065  fffc		       00 f0		      dc.w	Reset	; RESET
    2066  fffe		       00 f0		      dc.w	Reset	; IRQ
+=======
+   1963  ff39		       a8		      tay		; 2 (38)
+   1964  ff3a		       ae 00 fb 	      ldx	TitlePlanet1	; 3 (41)
+   1965  ff3d		       86 0e		      stx	PF1	; 3 (44)
+   1966  ff3f		       ae 08 fb 	      ldx	TitlePlanet2	; 3 (47)
+   1967  ff42		       86 0f		      stx	PF2	; 3 (50)
+   1968  ff44
+   1969  ff44				   .Loop
+   1970  ff44							;			      CPU   TIA   GRP0	GRP0A	 GRP1  GRP1A
+   1971  ff44							; -------------------------------------------------------------------------
+   1972  ff44		       a2 ff		      ldx	#$ff	; 2 (58)  (174)
+   1973  ff46		       b1 85		      lda	(SpritePtrs),y	; 5 (63)  (189)
+   1974  ff48		       85 1b		      sta	GRP0	; 3 (66)  (198)    D1	   --	   --	  --
+   1975  ff4a		       b1 87		      lda	(SpritePtrs+2),y	; 5 (71)  (213)
+   1976  ff4c		       85 02		      sta	WSYNC	; 3 (74)  (222)
+   1977  ff4e
+   1978  ff4e							; -------------------------------------------------------------------------
+   1979  ff4e		       85 1c		      sta	GRP1	; 3  (3)    (9)    D1	   D1	   D2	  --
+   1980  ff50		       86 0e		      stx	PF1	; 3  (6)   (18)
+   1981  ff52		       86 0f		      stx	PF2	; 3  (9)   (27)
+   1982  ff54		       b1 89		      lda	(SpritePtrs+4),y	; 5 (14)   (42)
+   1983  ff56		       85 1b		      sta	GRP0	; 3 (17)   (51)    D3	   D1	   D2	  D2
+   1984  ff58		       b1 8b		      lda	(SpritePtrs+6),y	; 5 (22)   (66)
+   1985  ff5a		       a2 00		      ldx	#0	; 2 (24)   (72)	     !
+   1986  ff5c		       85 1c		      sta	GRP1	; 3 (27)   (81)    D3	   D3	   D4	  D2!
+   1987  ff5e		       86 1b		      stx	GRP0	; 3 (30)   (90)    D5	   D3!	   D4	  D4
+   1988  ff60		       86 1c		      stx	GRP1	; 3 (33)   (99)    D5	   D5	   D6	  D4!
+   1989  ff62		       86 1b		      stx	GRP0	; 3 (36)  (108)    D4*    D5!	   D6	  D6
+   1990  ff64		       ad 00 fb 	      lda	TitlePlanet1	; 4 (40)  (120)
+   1991  ff67		       85 0e		      sta	PF1	; 3 (43)  (129)
+   1992  ff69		       ad 08 fb 	      lda	TitlePlanet2	; 4 (47)  (141)
+   1993  ff6c		       85 0f		      sta	PF2	; 3 (50)  (150)
+   1994  ff6e		       88		      dey		; 2 (52)  (156)
+   1995  ff6f		       10 d3		      bpl	.Loop	; 3 (55)  (165) 
+   1996  ff71
+   1997  ff71		       a9 00		      lda	#0	; 2 (57) 
+   1998  ff73		       85 02		      sta	WSYNC
+   1999  ff75		       85 09		      sta	COLUBK	; 3 (3) 
+   2000  ff77		       85 0d		      sta	PF0	; 3 (6)
+   2001  ff79		       85 0e		      sta	PF1	; 3 (9)
+   2002  ff7b		       85 0f		      sta	PF2	; 3 (12)
+   2003  ff7d		       60		      rts		; 6 (18)
+   2004  ff7e
+   2005  ff7e				  -	      IF	>KERNEL_BEGIN != >*
+   2006  ff7e				  -	      ECHO	"(3) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
+   2007  ff7e					      ENDIF
+   2008  ff7e
+   2009  ff7e				   SetTitleBattle SUBROUTINE
+   2010  ff7e							; set up graphics for battle title
+   2011  ff7e		       a9 3a		      lda	#<TitleBattle0
+   2012  ff80		       85 85		      sta	SpritePtrs
+   2013  ff82		       a9 3e		      lda	#<TitleBattle1
+   2014  ff84		       85 87		      sta	SpritePtrs+2
+   2015  ff86		       a9 42		      lda	#<TitleBattle2
+   2016  ff88		       85 89		      sta	SpritePtrs+4
+   2017  ff8a		       a9 46		      lda	#<TitleBattle3
+   2018  ff8c		       85 8b		      sta	SpritePtrs+6
+   2019  ff8e
+   2020  ff8e		       a9 fb		      lda	#>TitleBattle
+   2021  ff90		       85 86		      sta	SpritePtrs+1
+   2022  ff92		       85 88		      sta	SpritePtrs+3
+   2023  ff94		       85 8a		      sta	SpritePtrs+5
+   2024  ff96		       85 8c		      sta	SpritePtrs+7
+   2025  ff98
+   2026  ff98		       a9 00		      lda	#<BlankGfx
+   2027  ff9a		       85 8d		      sta	SpritePtrs+8
+   2028  ff9c		       85 8f		      sta	SpritePtrs+10
+   2029  ff9e		       a9 fc		      lda	#>BlankGfx
+   2030  ffa0		       85 8e		      sta	SpritePtrs+9
+   2031  ffa2		       85 90		      sta	SpritePtrs+11
+   2032  ffa4		       60		      rts
+   2033  ffa5
+   2034  ffa5				   SetTitleCopy SUBROUTINE
+   2035  ffa5		       a9 4a		      lda	#<TitleCopy0
+   2036  ffa7		       85 85		      sta	SpritePtrs
+   2037  ffa9		       a9 51		      lda	#<TitleCopy1
+   2038  ffab		       85 87		      sta	SpritePtrs+2
+   2039  ffad		       a9 58		      lda	#<TitleCopy2
+   2040  ffaf		       85 89		      sta	SpritePtrs+4
+   2041  ffb1		       a9 5f		      lda	#<TitleCopy3
+   2042  ffb3		       85 8b		      sta	SpritePtrs+6
+   2043  ffb5		       a9 66		      lda	#<TitleCopy4
+   2044  ffb7		       85 8d		      sta	SpritePtrs+8
+   2045  ffb9
+   2046  ffb9		       a9 fb		      lda	#>TitleCopy
+   2047  ffbb		       85 86		      sta	SpritePtrs+1
+   2048  ffbd		       85 88		      sta	SpritePtrs+3
+   2049  ffbf		       85 8a		      sta	SpritePtrs+5
+   2050  ffc1		       85 8c		      sta	SpritePtrs+7
+   2051  ffc3		       85 8e		      sta	SpritePtrs+9
+   2052  ffc5
+   2053  ffc5		       a9 00		      lda	#<BlankGfx
+   2054  ffc7		       85 8f		      sta	SpritePtrs+10
+   2055  ffc9		       a9 fc		      lda	#>BlankGfx
+   2056  ffcb		       85 90		      sta	SpritePtrs+11
+   2057  ffcd
+   2058  ffcd		       60		      rts
+   2059  ffce
+   2060  ffce				   SetTitleName SUBROUTINE
+   2061  ffce							; set up graphics for title name
+   2062  ffce		       a9 6d		      lda	#<TitleName0
+   2063  ffd0		       85 85		      sta	SpritePtrs
+   2064  ffd2		       a9 72		      lda	#<TitleName1
+   2065  ffd4		       85 87		      sta	SpritePtrs+2
+   2066  ffd6		       a9 77		      lda	#<TitleName2
+   2067  ffd8		       85 89		      sta	SpritePtrs+4
+   2068  ffda		       a9 7c		      lda	#<TitleName3
+   2069  ffdc		       85 8b		      sta	SpritePtrs+6
+   2070  ffde		       a9 81		      lda	#<TitleName4
+   2071  ffe0		       85 8d		      sta	SpritePtrs+8
+   2072  ffe2		       a9 86		      lda	#<TitleName5
+   2073  ffe4		       85 8f		      sta	SpritePtrs+10
+   2074  ffe6
+   2075  ffe6		       a9 fb		      lda	#>TitleName
+   2076  ffe8		       85 86		      sta	SpritePtrs+1
+   2077  ffea		       85 88		      sta	SpritePtrs+3
+   2078  ffec		       85 8a		      sta	SpritePtrs+5
+   2079  ffee		       85 8c		      sta	SpritePtrs+7
+   2080  fff0		       85 8e		      sta	SpritePtrs+9
+   2081  fff2		       85 90		      sta	SpritePtrs+11
+   2082  fff4		       60		      rts
+   2083  fff5
+ Page $ff00 has 5 bytes remaining
+   2084  fff5					      ECHO	"Page", (*&$ff00), "has", ($fffa - *)d, "bytes remaining"
+   2085  fff5
+   2086  fff5							; -----------------------------------------------------------------------------
+   2087  fff5							; Interrupts
+   2088  fff5							; -----------------------------------------------------------------------------
+   2089  fffa					      ORG	ORG_ADDR + $ffa
+   2090  fffa				   Interrupts
+   2091  fffa		       00 f0		      dc.w	Reset	; NMI
+   2092  fffc		       00 f0		      dc.w	Reset	; RESET
+   2093  fffe		       00 f0		      dc.w	Reset	; IRQ
+>>>>>>> Stashed changes
