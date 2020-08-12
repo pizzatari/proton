@@ -1423,15 +1423,6 @@ SpritesShiftDown SUBROUTINE
     iny
     cpy #MAX_ROWS-1
     bne .ShiftDown
-
-    ; load blank
-    lda #<BlankGfx
-    sta Sprites0+MAX_ROWS-1
-    sta Sprites1+MAX_ROWS-1
-    sta SpeedX0+MAX_ROWS-1
-    sta SpeedX1+MAX_ROWS-1
-    sta PosX0+MAX_ROWS-1
-    sta PosX1+MAX_ROWS-1
     rts
 
 SpritesShiftUp SUBROUTINE
@@ -1452,24 +1443,32 @@ SpritesShiftUp SUBROUTINE
     sta PosX1,y
     dey
     bne .ShiftUp
-
-    lda #<BlankGfx
-    sta Sprites0
-    sta Sprites1
-    sta SpeedX0
-    sta SpeedX1
-    sta PosX0
-    sta PosX1
     rts
 
 SpawnInTop SUBROUTINE
     ; Spawn in alternating rows, so the adjacent row can't be occupied.
+    lda #<FighterGfx
+    sta Sprites0+MAX_ROWS-1
+    lda INTIM
+    ora #%00100000
+    sta PosX0+MAX_ROWS-1
+    lda #1
+    sta SpeedX0+MAX_ROWS-1
+
     lda #<FuelGfx
     sta Sprites1+MAX_ROWS-1
     rts
 
 SpawnInBottom SUBROUTINE
     ; Spawn in alternating rows, so the adjacent row can't be occupied.
+    lda #<FighterGfx
+    sta Sprites0
+    lda INTIM
+    ora #%01000000
+    sta PosX0
+    lda #-1
+    sta SpeedX0
+
     lda #<CondoGfx
     sta Sprites1
     rts
