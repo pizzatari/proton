@@ -34,9 +34,9 @@ TitleCopy3
 TitleCopy4
 	dc.b %00000000
 	dc.b %11010111
-	dc.b %01010010
-	dc.b %01000010
-	dc.b %11000110
+	dc.b %01010110
+	dc.b %01000011
+	dc.b %11000111
 	dc.b %00000000
 	dc.b %00000000
 TitleCopy5 SET BlankGfx

@@ -117,6 +117,8 @@ Temp2           = Ptr+1
 SpritePtrs      ds.w MAX_NUM_PTRS
 GfxPtr0         = SpritePtrs
 GfxPtr1         = SpritePtrs+2
+GfxPtr2         = SpritePtrs+4
+GfxPtr3         = SpritePtrs+6
 MemEnd
 
     ORG MemEnd
@@ -125,7 +127,7 @@ LaserPtr        ds.w 1
 
     ORG MemEnd
 ; Game vars 
-Score           ds.b 3                      ; BCD in MSB order
+Score           ds.b 3              ; BCD in MSB order
 
 ; screen motion
 ScreenPosY      ds.b 1
@@ -136,12 +138,12 @@ PlyrSpeedX      ds.b 1
 PlyrPosX        ds.b 1
 
 ; sprite data (GRP0/GRP1)
-Sprites0        ds.b MAX_ROWS        ; gfx low byte = sprite type
-Sprites1        ds.b MAX_ROWS        ; gfx low byte = sprite type
+Sprites0        ds.b MAX_ROWS       ; gfx low byte = sprite type
+Sprites1        ds.b MAX_ROWS       ; gfx low byte = sprite type
 SpeedX0         ds.b MAX_ROWS
-SpeedX1         ds.b MAX_ROWS
 PosX0           ds.b MAX_ROWS
-PosX1           ds.b MAX_ROWS
+
+SpriteBR        ds.b 1              ; gfx low byte for bottom row
 
 JoyFire         ds.b 1
 LaserAudioFrame ds.b 1
@@ -494,7 +496,7 @@ GameInit SUBROUTINE
     jsr InitScreen
     jsr InitPlayer
     jsr SpritePtrsClear
-    ;jsr SpawnBuildings
+    jsr SpawnBuildings
     ;jsr SpawnEnemies
     lda #30
     sta Delay
@@ -555,6 +557,18 @@ GameVertBlank SUBROUTINE
     lda Sprites1+MAX_ROWS-1
     sta GfxPtr1
 
+    ; setup bottom row graphics
+    lda Sprites1
+    sec
+    sbc #PF_ROW_HEIGHT
+    sta GfxPtr2
+    lda #>BlankGfx
+    sbc #0
+    sta GfxPtr2+1
+
+    lda SpriteBR
+    sta GfxPtr3
+
     lda #COLOR_LASER
     sta COLUP0
     lda #COLOR_BUILDING
@@ -598,7 +612,7 @@ GameKernel SUBROUTINE
     jsr RowKernel
     ldy #1
     jsr RowKernel
-    ldy #0
+    ;ldy #0
     jsr ShrinkerRowKernel
 
     jsr HUDSetup
@@ -737,7 +751,7 @@ GameIO SUBROUTINE
 .Return
     rts
 
-    ALIGN 256
+    ALIGN 256, $ff
 KERNEL_BEGIN SET *
 ExpanderRowKernel SUBROUTINE
     lda ScreenPosY
@@ -745,7 +759,7 @@ ExpanderRowKernel SUBROUTINE
     tay
 .Row
     ldx PFPattern,y                 ; 4 (37)
-    lda ShipPalette0,y              ; 4 (41)
+    lda ShipPalette,y               ; 4 (41)
     sta WSYNC
 
     sta COLUP0                      ; 3 (3)
@@ -761,27 +775,9 @@ ExpanderRowKernel SUBROUTINE
     bpl .Row                        ; 2 (32)
     rts                             ; 6 (38)
 
-;ExpanderRowKernel SUBROUTINE
-;    lda ScreenPosY
-;    and #PF_ROW_HEIGHT-1
-;    tay
-;    iny
-;.Row
-;    lda PFPattern-1,y               ; 4 (17)
-;    sta WSYNC
-;    sta PF0                         ; 3 (3)
-;    sta PF1                         ; 3 (6)
-;    sta PF2                         ; 3 (9)
-;    dey                             ; 2 (11)
-;    bne .Row                        ; 2 (13)
-;    rts                             ; 6 (19)
-
 RowKernel SUBROUTINE
     tya                             ; 2 (2)
     pha                             ; 3 (5)
-
-    ; Two lines of the playfield need to be written out during
-    ; the horizontal positioning.
 
     ldx #0                          ; 2 (7)
     lda PosX0,y                     ; 4 (11)
@@ -810,7 +806,7 @@ RowKernel SUBROUTINE
     tax                             ; 2 (31)
     lda #$08                        ; 2 (33)
     sta COLUP1                      ; 3 (36)
-    lda ShipPalette0,y              ; 4 (40)
+    lda ShipPalette,y               ; 4 (40)
     sta COLUP0                      ; 3 (43)
     lda (GfxPtr1),y                 ; 5 (48)
 
@@ -825,8 +821,6 @@ RowKernel SUBROUTINE
     dey                             ; 2 (22)
     bpl .Row                        ; 2 (24)
     rts                             ; 6 (30)
-    ; This must exit before or on cycle 42 for the next
-    ; row to meet it's cycle timings.
 
 ShrinkerRowKernel SUBROUTINE
     ; position player
@@ -846,60 +840,90 @@ ShrinkerRowKernel SUBROUTINE
     lda ScreenPosY                  ; 3 (18)
     and #PF_ROW_HEIGHT-1            ; 2 (20)
     tax                             ; 2 (22)
+    ; account for 2 lines of horiz positioning
     inx                             ; 2 (24)
     inx                             ; 2 (26)
     stx EndLine                     ; 3 (29)
 
-    lda #PF_ROW_HEIGHT*2-3          ; 2 (31)
-    sec                             ; 2 (33) 
-    sbc EndLine                     ; 2 (35)
-    sta PlyrIdx                     ; 3 (38)
+    ; calculate index into ship graphics
+    lda #PF_ROW_HEIGHT*2-1          ; 2 (31)
+    eor EndLine                     ; 2 (33)
+    sta PlyrIdx                     ; 3 (36)
 
-    ldy #PF_ROW_HEIGHT*2-3          ; 2 (40)
-.Row
-    tya                             ; 2 (37)
-    and #PF_ROW_HEIGHT-1            ; 2 (39)
-    tax                             ; 2 (41)
-    lda PFPattern,x                 ; 4 (45)
-    sta Temp                        ; 3 (48)
-
-    lda PlyrIdx                     ; 3 (51)
-    and #PF_ROW_HEIGHT*2-1          ; 2 (53)
-    eor #$1f                        ; 2 (55)     reversing idx reduces ROM space
-    tax                             ; 3 (58)
-    lda ShipGfx,x                   ; 5 (63)
+    ; fixed height top 14 pixels
+    ldx #PF_ROW_HEIGHT*2-3          ; 2 (38)
+.TopRow
+    ldy PlyrIdx                     ; 3 (50)
+    lda ShipGfx-2,y                 ; 4 (54)
+    and MaskTable-2,y               ; 4 (58)
+    dec PlyrIdx                     ; 5 (63)
 
     sta WSYNC
     sta GRP0                        ; 3 (3)
-    lda ShipPalette0,x              ; 4 (7)
+    lda ShipPalette-2,y             ; 4 (7)
     sta COLUP0                      ; 3 (10)
 
-    lda Temp                        ; 3 (13)
-    sta PF0                         ; 3 (16)
-    sta PF1                         ; 3 (19)
-    sta PF2                         ; 3 (22)
+    txa                             ; 2 (12)
+    tay                             ; 2 (14)
+    lda PFPattern,y                 ; 4 (18)
+    sta PF0                         ; 3 (21)
+    sta PF1                         ; 3 (24)
+    sta PF2                         ; 3 (27)
 
-    dec PlyrIdx                     ; 5 (27)
-    dey                             ; 2 (29)
-    cpy EndLine                     ; 3 (32)
-    bcs .Row                        ; 2 (34)
+    lda (GfxPtr2),y                 ; 5 (32)
+    and MaskTop-2,y                 ; 4 (36)
+    sta GRP1                        ; 3 (39)
 
-    lda #0                          ; 2 (36)
-    sta NUSIZ1                      ; 3 (39)
+    dex                             ; 2 (41)
+    cpx #PF_ROW_HEIGHT+2            ; 3 (44)
+    bcs .TopRow                     ; 2 (46)
+
+    ; variable height bottom 17 to 2 pixels
+.BotRow
+    ldy PlyrIdx                     ; 3 (46)
+    lda ShipGfx-2,y                 ; 4 (50)
+    and MaskTable-2,y               ; 4 (54)
+    dec PlyrIdx                     ; 5 (59)
+
     sta WSYNC
-    sta ENAM0                       ; 3 (3)
-    sta COLUBK                      ; 3 (6)
-    sta PF0                         ; 3 (9)
-    sta PF1                         ; 3 (12)
-    sta PF2                         ; 3 (15)
+    sta GRP0                        ; 3 (3)
+    lda ShipPalette-2,y             ; 4 (7)
+    sta COLUP0                      ; 3 (10)
 
-    rts                             ; 6 (21)
+    txa                             ; 2 (12)
+    tay                             ; 2 (14)
+    lda PFPattern,y                 ; 4 (18)
+    sta PF0                         ; 3 (21)
+    sta PF1                         ; 3 (24)
+    sta PF2                         ; 3 (27)
+
+    lda (GfxPtr3),y                 ; 5 (32)
+    sta GRP1                        ; 3 (35)
+
+    dex                             ; 2 (37)
+    cpx EndLine                     ; 3 (40)
+    bcs .BotRow                     ; 2 (42)
+
+.Done
+    lda #0                          ; 2 (44)
+    sta NUSIZ1                      ; 3 (47)
+    sta WSYNC
+
+    sta GRP0                        ; 3 (3)
+    sta GRP1                        ; 3 (6)
+    sta ENAM0                       ; 3 (9)
+    sta COLUBK                      ; 3 (12)
+    sta PF0                         ; 3 (15)
+    sta PF1                         ; 3 (18)
+    sta PF2                         ; 3 (21)
+
+    rts                             ; 6 (27)
 
     IF >KERNEL_BEGIN != >*
         ECHO "(1) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
     ENDIF
 
-    ALIGN 256
+    ALIGN 256, $ff
 KERNEL_BEGIN SET *
 HUDKernel SUBROUTINE
     lda #$ff                        ; 2 (8)
@@ -917,11 +941,13 @@ HUDKernel SUBROUTINE
     sty CTRLPF                      ; 3 (18)
     sty VDELP0                      ; 3 (21)
     sty VDELP1                      ; 3 (24)
+    stx GRP0                        ; 3 (27)
+    stx GRP1                        ; 3 (30)
 
     ; status panel (X = 0 from above)
-    lda #71                         ; 2 (20)
-    ldy HUDPalette                  ; 3 (23)
-    jsr HorizPositionBG             ; 6 (6)
+    lda #71                         ; 2 (32)
+    ldy HUDPalette                  ; 3 (35)
+    jsr HorizPositionBG             ; 6 (41)
 
     lda #71+8                       ; 2 (2)
     ldx #1                          ; 2 (4)
@@ -975,7 +1001,7 @@ InitScreen SUBROUTINE
     ; init screen
     lda #8
     sta ScreenPosY
-    lda #0
+    lda #1
     sta ScreenSpeedY
     rts
 
@@ -1008,8 +1034,6 @@ SpawnBuildings SUBROUTINE
     stx Sprites1,y
     ldx #<BaseGfx
     stx Sprites1+1,y
-    lda #0
-    sta SpeedX1,y
     dey
     dey
     bne .Pop
@@ -1305,7 +1329,7 @@ HorizPositionBG SUBROUTINE
     rts
 
 ; performs horizontal positioning while drawing a playfield pattern
-F; this must enter on or before cycle 62
+; this must enter on or before cycle 62
 HorizPositionPF SUBROUTINE
     sty PF0         ; 3 (65)
     sec             ; 2 (67)
@@ -1405,6 +1429,13 @@ SpawnSprite SUBROUTINE
     rts
 
 SpritesShiftDown SUBROUTINE
+    ; shift Sprites1 down
+    lda Sprites1
+    sta SpriteBR
+
+    lda Sprites1+1
+    sta Sprites1
+
     ; shift rows down
     ldy #1
 .ShiftDown
@@ -1412,17 +1443,16 @@ SpritesShiftDown SUBROUTINE
     sta Sprites0,y
     lda Sprites1+1,y
     sta Sprites1,y
+
     lda SpeedX0+1,y
     sta SpeedX0,y
-    lda SpeedX1+1,y
-    sta SpeedX1,y
+
     lda PosX0+1,y
     sta PosX0,y
-    lda PosX1+1,y
-    sta PosX1,y
     iny
     cpy #MAX_ROWS-1
     bne .ShiftDown
+
     rts
 
 SpritesShiftUp SUBROUTINE
@@ -1433,16 +1463,22 @@ SpritesShiftUp SUBROUTINE
     sta Sprites0,y
     lda Sprites1-1,y
     sta Sprites1,y
+
     lda SpeedX0-1,y
     sta SpeedX0,y
-    lda SpeedX1-1,y
-    sta SpeedX1,y
+
     lda PosX0-1,y
     sta PosX0,y
-    lda PosX1-1,y
-    sta PosX1,y
+
     dey
     bne .ShiftUp
+
+    lda Sprites1
+    sta Sprites1+1
+
+    lda SpriteBR
+    sta Sprites1
+
     rts
 
 SpawnInTop SUBROUTINE
@@ -1455,7 +1491,7 @@ SpawnInTop SUBROUTINE
     lda #1
     sta SpeedX0+MAX_ROWS-1
 
-    lda #<FuelGfx
+    lda #<CondoGfx
     sta Sprites1+MAX_ROWS-1
     rts
 
@@ -1464,143 +1500,21 @@ SpawnInBottom SUBROUTINE
     lda #<FighterGfx
     sta Sprites0
     lda INTIM
-    ora #%01000000
+    ora #%01100000
     sta PosX0
     lda #-1
     sta SpeedX0
 
-    lda #<CondoGfx
-    sta Sprites1
+    lda #<FuelGfx
+    sta SpriteBR
     rts
 
-;SpawnTop SUBROUTINE
-;    ; shift rows down
-;    ldy #1
-;.ShiftDown
-;    lda Sprites0+1,y
-;    sta Sprites0,y
-;
-;    lda Sprites1+1,y
-;    sta Sprites1,y
-;
-;    lda SpeedX0+1,y
-;    sta SpeedX0,y
-;
-;    lda SpeedX1+1,y
-;    sta SpeedX1,y
-;
-;    lda PosX0+1,y
-;    sta PosX0,y
-;
-;    lda PosX1+1,y
-;    sta PosX1,y
-;
-;    iny
-;    cpy #MAX_ROWS-1
-;    bne .ShiftDown
-;
-;    ; load blank
-;    lda #<BlankGfx
-;    sta Sprites0+MAX_ROWS-1
-;    sta Sprites1+MAX_ROWS-1
-;    lda #0
-;    sta SpeedX0+MAX_ROWS-1
-;    sta SpeedX1+MAX_ROWS-1
-;    sta PosX0+MAX_ROWS-1
-;    sta PosX1+MAX_ROWS-1
-;
-;    ; spawn replacements
-;    lda FrameCtr
-;    and #$0f
-;    cmp #8
-;    bcs .Blank1
-;    lda #<FighterGfx
-;    sta Sprites0+MAX_ROWS-1
-;    lda ScreenPosY
-;    asl
-;    adc #50
-;    sta PosX0+MAX_ROWS-1
-;    lda #1
-;    sta SpeedX0+MAX_ROWS-1
-;.Blank1
-;
-;    lda FrameCtr
-;    eor INTIM
-;    and #3
-;    tax
-;    lda Buildings,x
-;    sta Sprites1+MAX_ROWS-1
-;    bcc .Blank2
-;    lda FrameCtr
-;    and #%00011111
-;    adc #90
-;    sta PosX1+MAX_ROWS-1
-;.Blank2
-;    rts
-;
-;SpawnBottom SUBROUTINE
-;    ; shift rows up
-;    ldy #MAX_ROWS-1
-;.ShiftUp
-;    lda Sprites0-1,y
-;    sta Sprites0,y
-;    lda Sprites1-1,y
-;    sta Sprites1,y
-;    lda SpeedX0-1,y
-;    sta SpeedX0,y
-;    lda SpeedX1-1,y
-;    sta SpeedX1,y
-;    lda PosX0-1,y
-;    sta PosX0,y
-;    lda PosX1-1,y
-;    sta PosX1,y
-;
-;    dey
-;    cpy #1
-;    bne .ShiftUp
-;
-;    lda #<BlankGfx
-;    sta Sprites0+1
-;    sta Sprites1+1
-;    lda #0
-;    sta SpeedX0+1
-;    sta SpeedX1+1
-;    sta PosX0+1
-;    sta PosX1+1
-;
-;    ; spawn replacements
-;    lda FrameCtr
-;    and #$0f
-;    cmp #8
-;    bcs .Blank1
-;    lda #<FighterGfx
-;    sta Sprites0+1
-;    lda ScreenPosY
-;    asl
-;    adc #75
-;    sta PosX0+1
-;    lda #1
-;    sta SpeedX0+1
-;.Blank1
-;
-;    lda FrameCtr
-;    eor INTIM
-;    and #3
-;    tax
-;    lda Buildings,x
-;    sta Sprites1+1
-;    beq .Blank2
-;    lda FrameCtr
-;    and #%00011111
-;    adc #90
-;    sta PosX1+1
-;.Blank2
-;    rts
+    ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
 
 ; -----------------------------------------------------------------------------
 ; Data
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $b00
+    ORG ORG_ADDR + $c00
 
     include "dat/title-planet.pf"
     include "dat/title-proton.pf"
@@ -1627,31 +1541,38 @@ LaserGfx1
     dc.b %01010100
     dc.b %00010000
 
-    ORG ORG_ADDR + $c00
+    ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
+
+    ORG ORG_ADDR + $d00
 GFX_BEGIN SET *
 
-; BlankGfx must be on the page's first byte
+; BlankGfx must be on the first byte of the page
 BlankGfx
-ShipGfx
     ds.b 16, 0
-.Begin
+MaskTop
+    ds.b PF_ROW_HEIGHT, 0
+MaskTable
+    ds.b PF_ROW_HEIGHT, $ff
+    ds.b PF_ROW_HEIGHT, 0
+
+ShipGfx
     dc.b %00000000
-    dc.b %00000000
-    dc.b %01111100
-    dc.b %01111100
-    dc.b %11010110
-    dc.b %10111010
-    dc.b %11111110
-    dc.b %11111110
-    dc.b %11111110
-    dc.b %11111110
-    dc.b %11111110
-    dc.b %11111110
-    dc.b %11010110
     dc.b %10010010
-    dc.b %00010000
+    dc.b %11010110
+    dc.b %11010110
+    dc.b %11111110
+    dc.b %11111110
+    dc.b %11111110
+    dc.b %11111110
+    dc.b %11111110
+    dc.b %11111110
+    dc.b %10111010
+    dc.b %11010110
+    dc.b %01111100
+    dc.b %01111100
     dc.b %00000000
-SHIP_HEIGHT = * - .Begin
+    dc.b %00000000
+SHIP_HEIGHT = * - ShipGfx
 
 FighterGfx
     dc.b %00000000
@@ -1671,7 +1592,9 @@ FighterGfx
     dc.b %00000000
     dc.b %00000000
 FIGHTER_HEIGHT = * - FighterGfx
-    dc.b TYPE_ENEMY
+    ; Two extra zero bytes are needed because the kernel indexes a pixel
+    ; offset from 0 to 18
+    dc.b 0, 0, TYPE_ENEMY
 
 CondoGfx
     dc.b %00000000
@@ -1691,7 +1614,7 @@ CondoGfx
     dc.b %00000000
     dc.b %00000000
 Condo_HEIGHT = * - CondoGfx
-    dc.b TYPE_BUILDING
+    dc.b 0, 0, TYPE_BUILDING
 
 BaseGfx
     dc.b %00000000
@@ -1711,7 +1634,7 @@ BaseGfx
     dc.b %00000000
     dc.b %00000000
 BASE_HEIGHT = * - BaseGfx
-    dc.b TYPE_BUILDING
+    dc.b 0, 0, TYPE_BUILDING
 
 FuelGfx
     dc.b %00000000
@@ -1731,7 +1654,7 @@ FuelGfx
     dc.b %00000000
     dc.b %00000000
 FUEL_HEIGHT = * - FuelGfx
-    dc.b TYPE_BUILDING
+    dc.b 0, 0, TYPE_BUILDING
 
 ExplosionGfx
     dc.b %00000000
@@ -1751,22 +1674,7 @@ ExplosionGfx
     dc.b %00000000
     dc.b %00000000
 EXPLOSION_HEIGHT = * - ExplosionGfx
-    dc.b TYPE_ACTION
-
-; this pattern is generated by ./bin/playfield.exe
-; the last byte must be repeated.
-#if 1
-PFPattern
-    dc.b $6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
-    dc.b $0d, $83, $09, $3a, $a0, $7e, $49, $6d
-PF_ROW_HEIGHT = * - PFPattern
-#else
-; test pattern
-PFPattern
-    dc.b $ff, $00, $00, $00, $00, $00, $00, $00
-    dc.b $00, $00, $00, $00, $00, $00, $00, $ff
-PF_ROW_HEIGHT = * - PFPattern
-#endif
+    dc.b 0, 0, TYPE_ACTION
 
 Digits
 Digit0
@@ -1854,7 +1762,6 @@ Digit9
     IF >GFX_BEGIN != >*
         ECHO "(1) Graphics crossed a page boundary!", (GFX_BEGIN&$ff00), (*&$ff00)
     ENDIF
-    ECHO "Page", (GFX_BEGIN&$ff00 ), "has", (((GFX_BEGIN+$100)&$ff00)-*)d, "bytes remaining"
 
 DigitTable
     dc.b <Digit0, <Digit1, <Digit2, <Digit3, <Digit4
@@ -1909,6 +1816,26 @@ ModeKernel
 ModeOverscan
     dc.w TitleOverscan      ; MODE_TITLE
     dc.w GameOverscan       ; MODE_GAME
+
+; This pattern is generated by ./bin/playfield.exe
+; Bytes 0 and 15 must be the same.
+#if 1
+PFPattern
+    dc.b $6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
+    dc.b $0d, $83, $09, $3a, $a0, $7e, $49, $6d
+PF_ROW_HEIGHT = * - PFPattern
+; Doubled up for speed reasons.
+    dc.b $6d, $e5, $b6, $0e, $c0, $a0, $b6, $ec
+    dc.b $0d, $83, $09, $3a, $a0, $7e, $49, $6d
+#else
+; test pattern
+PFPattern
+    dc.b $ff, $00, $00, $00, $00, $00, $00, $00
+    dc.b $00, $00, $00, $00, $00, $00, $00, $ff
+PF_ROW_HEIGHT = * - PFPattern
+    dc.b $ff, $00, $00, $00, $00, $00, $00, $00
+    dc.b $00, $00, $00, $00, $00, $00, $00, $ff
+#endif
 
     ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
 

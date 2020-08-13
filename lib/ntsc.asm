@@ -53,40 +53,24 @@ TitleNamePalette
     dc.b $8e
     dc.b 0
 
-ShipPalette0
+ShipPalette
     dc.b $00
-    dc.b $00
-    dc.b $08 ; *
-    dc.b $0c ; *
-    dc.b $0a ; *
     dc.b $08 ; *
     dc.b $08 ; *
-    dc.b $8a ; *
-    dc.b $88 ; *
-    dc.b $86 ; *
-    dc.b $84 ; *
-    dc.b $04 ; *
     dc.b $06 ; *
-    dc.b $08
-    dc.b $00
-    dc.b $00
-ShipPalette1        ; doubled up for the kernel
-    dc.b $00
-    dc.b $00
-    dc.b $08 ; *
-    dc.b $0c ; *
-    dc.b $0a ; *
-    dc.b $08 ; *
-    dc.b $08 ; *
-    dc.b $8a ; *
-    dc.b $88 ; *
-    dc.b $86 ; *
-    dc.b $84 ; *
     dc.b $04 ; *
-    dc.b $06 ; *
-    dc.b $08
-    dc.b $00
-    dc.b $00
+    dc.b $84 ; *
+    dc.b $86 ; *
+    dc.b $88 ; *
+    dc.b $8a ; *
+    dc.b $08 ; *
+    dc.b $08 ; *
+    dc.b $0a ; *
+    dc.b $0c ; *
+    dc.b $08 ; *
+    dc.b COLOR_LASER
+    dc.b COLOR_LASER
+    ds.b PF_ROW_HEIGHT, COLOR_LASER
 
 HUDPalette
     dc.b $08, $00, $80
