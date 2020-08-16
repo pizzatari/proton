@@ -72,6 +72,24 @@ ShipPalette
     dc.b COLOR_LASER
     ds.b PF_ROW_HEIGHT, COLOR_LASER
 
+EnemyPalette
+    dc.b $00
+    dc.b $08 ; *
+    dc.b $08 ; *
+    dc.b $06 ; *
+    dc.b $04 ; *
+    dc.b $44 ; *
+    dc.b $46 ; *
+    dc.b $48 ; *
+    dc.b $4a ; *
+    dc.b $08 ; *
+    dc.b $08 ; *
+    dc.b $0a ; *
+    dc.b $0c ; *
+    dc.b $08 ; *
+    dc.b COLOR_LASER
+    dc.b COLOR_LASER
+
 HUDPalette
     dc.b $08, $00, $80
 
@@ -94,5 +112,39 @@ HUDPalette
 ;ShipPalette3
 ;    ;      v---- missile color
 ;    dc.b $2e
+
+
+; -----------------------------------------------------------------------------
+; Audio data
+; -----------------------------------------------------------------------------
+LASER_AUDIO_RATE    = %00000001
+LASER_AUDIO_FRAMES  = 9
+
+LaserVol
+    ds.b 0, 6, 8, 6, 8, 6, 8, 6, 0
+LaserCon
+    dc.b $8, $8, $8, $8, $8, $8, $8, $8, $8
+LaserFreq
+    dc.b 0, 1, 0, 1, 0, 1, 0, 1, 0
+
+EngineVolume SUBROUTINE
+.range  SET [MAX_SPEED_Y>>FPOINT_SCALE]+1
+.val    SET 0
+.max    SET 6
+.min    SET 2
+    REPEAT .range
+        dc.b [.val * [.max - .min]] / .range + .min
+.val    SET .val + 1
+    REPEND
+
+EngineFrequency SUBROUTINE
+.range  SET [MAX_SPEED_Y>>FPOINT_SCALE]+1
+.val    SET .range
+.max    SET 31
+.min    SET 7
+    REPEAT .range
+        dc.b [.val * [.max - .min]] / .range + .min
+.val    SET .val - 1
+    REPEND
 
 #endif
