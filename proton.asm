@@ -563,6 +563,40 @@ TitleInitLaser SUBROUTINE
     stx LaserPF+5
     rts
 
+#if 1
+TitleAnimate SUBROUTINE
+    lda FrameCtr
+    cmp #255
+    bne .Anim
+    jsr TitleInitLaser
+    rts
+
+.Anim
+    ; slow down animation speed
+    and #1
+    bne .Return
+
+    lda Delay
+    beq .Return
+
+    sec
+    sbc #1
+    sta Delay
+
+    sec
+    rol LaserPF+0
+    ror LaserPF+1
+    rol LaserPF+2
+    bcc .Return
+
+    rol LaserPF+3
+    ror LaserPF+4
+    rol LaserPF+5
+
+.Return
+    rts
+
+#else
 TitleAnimate SUBROUTINE
     lda FrameCtr
     cmp #255
@@ -606,6 +640,7 @@ TitleAnimate SUBROUTINE
     stx LaserPF+5
 .Return
     rts
+#endif
 
 ; -----------------------------------------------------------------------------
 ; Game code
