@@ -2,7 +2,7 @@
 ; Game:     Battle for Proton
 ; Author:   Edward Gilmour
 ; Date:     Jan 21, 2019
-; Version:  0.2 (beta)
+; Version:  0.3 (beta)
 ; -----------------------------------------------------------------------------
 ; Treadmill kernel: The rows are pushed downward and the terrain is drawn
 ; fixed relative to the top of the row. The first and last rows expand and
@@ -105,6 +105,8 @@ TYPE_ACTION         = 2
 
 LASER_DAMAGE        = 4
 
+TITLE_DELAY         = 38
+
 
 ; -----------------------------------------------------------------------------
 ; Variables
@@ -117,19 +119,16 @@ FrameCtr        ds.b 1
 RowNum          ds.w 1              ; row number associated with the bottom row
 Mode            ds.b 1
 Delay           ds.b 1
+SpritePtrs      ds.w MAX_NUM_PTRS
 Ptr             ds.w 1
 Temp            = Ptr
 Temp2           = Ptr+1
-SpritePtrs      ds.w MAX_NUM_PTRS
-GfxPtr0         = SpritePtrs
-GfxPtr1         = SpritePtrs+2
-GfxPtr2         = SpritePtrs+4
-GfxPtr3         = SpritePtrs+6
 MemEnd
 
     ORG MemEnd
 ; Title vars
 LaserPtr        ds.w 1
+LaserPF         ds.c 6
 
     ORG MemEnd
 ; Game vars 
@@ -142,6 +141,9 @@ ScreenSpeedY    ds.b 1
 ; player ship motion
 PlyrSpeedX      ds.b 1
 PlyrPosX        ds.b 1
+PlyrHP          ds.b 1
+PlyrLives       ds.b 1
+PlyrLaser       ds.b 1
 
 ; sprite data (GRP0/GRP1)
 Sprites0        ds.b MAX_ROWS       ; gfx low byte = sprite type
@@ -159,6 +161,11 @@ TempColor       = LocalVars+1
 EndLine         = LocalVars+1
 PlyrIdx         = LocalVars+2
 HUDHeight       = LocalVars+1
+
+GfxPtr0         = SpritePtrs
+GfxPtr1         = SpritePtrs+2
+GfxPtr2         = SpritePtrs+4
+GfxPtr3         = SpritePtrs+6
 
     ECHO "RAM used =", (* - $80)d, "bytes"
     ECHO "RAM free =", (128 - (* - $80))d, "bytes" 
@@ -198,6 +205,7 @@ HUDHeight       = LocalVars+1
 Reset
     sei
     CLEAN_START
+    jsr TitleInitLaser
 
 Init
     TIMER_WAIT  ; maintain stable line count if we got here from a reset
@@ -220,6 +228,17 @@ FrameStart SUBROUTINE
 VerticalSync SUBROUTINE
     VERTICAL_SYNC
     rts
+
+; Procedure tables
+ModeVertBlank
+    dc.w TitleVertBlank     ; MODE_TITLE
+    dc.w GameVertBlank      ; MODE_GAME
+ModeKernel
+    dc.w TitleKernel        ; MODE_TITLE
+    dc.w GameKernel         ; MODE_GAME
+ModeOverscan
+    dc.w TitleOverscan      ; MODE_TITLE
+    dc.w GameOverscan       ; MODE_GAME
 
 ; -----------------------------------------------------------------------------
 ; Title code
@@ -256,6 +275,8 @@ TitleVertBlank SUBROUTINE
     jsr HorizPosition
     sta WSYNC
     sta HMOVE
+
+    jsr TitleAnimate
 
     TIMER_WAIT
 
@@ -356,6 +377,32 @@ TitleKernel SUBROUTINE      ; 6 (6)
     cpy #4                  ; 2 (7)
     bne .Laser0             ; 2 (9)
 
+#if 1
+    ; ------------------------------------------------------------------------
+    ; laser middle line
+    ; ------------------------------------------------------------------------
+    lda (LaserPtr),y        ; 5 (14)
+    ldy #0                  ; 2 (16)
+    sta GRP0                ; 3 (19)
+
+    lda LaserPF             ; 3 (22)
+    ldx LaserPF+1           ; 3 (25)
+
+    sta WSYNC
+    sta PF0                 ; 3 (3)
+    stx PF1                 ; 3 (6)
+    lda LaserPF+2           ; 3 (9)
+    sta PF2                 ; 3 (12)
+
+    SLEEP_21                ; 21 (33)
+    lda LaserPF+3           ; 3 (36)
+    sta PF0                 ; 3 (39)
+    lda LaserPF+4           ; 3 (42)
+    sta PF1                 ; 3 (45)
+    lda LaserPF+5           ; 3 (48)
+    sta PF2                 ; 3 (51)
+
+#else
     ; ------------------------------------------------------------------------
     ; laser middle line
     ; ------------------------------------------------------------------------
@@ -371,6 +418,7 @@ TitleKernel SUBROUTINE      ; 6 (6)
     SLEEP_38                ; 38 (47)
     lda #$3f                ; 2 (49)
     sta PF2                 ; 3 (52)
+#endif
 
     ; ------------------------------------------------------------------------
     ; laser bottom
@@ -449,7 +497,7 @@ TitleKernel SUBROUTINE      ; 6 (6)
     sta COLUP0
     sta COLUP1
 
-    SLEEP_LINES 33
+    SLEEP_LINES 34
 
     jsr SetTitleCopy
     ldy #7-1
@@ -475,24 +523,87 @@ TitleOverscan SUBROUTINE
     lda #2
     sta VBLANK
 
+    lda #[LINES_OVERSCAN-1]*76/64
+    sta TIM64T
+
     lda #COLOR_BLACK
     sta COLUBK
     sta COLUPF
-    inc FrameCtr
 
-    lda #LINES_OVERSCAN*76/64
-    sta TIM64T
     jsr TitleIO
     TIMER_WAIT
     rts
 
 TitleIO SUBROUTINE
+    lda SWCHB
+    and #SWITCH_RESET
+    bne .Joystick
+    jmp Reset
+
+.Joystick
     lda #JOY_FIRE
     bit INPT4
     bne .Return
     lda #MODE_GAME
     sta Mode
     jsr GameInit
+.Return
+    rts
+
+TitleInitLaser SUBROUTINE
+    ldx #TITLE_DELAY
+    stx Delay
+    ldx #$0f
+    stx LaserPF
+    stx LaserPF+3
+    ldx #0
+    stx LaserPF+1
+    stx LaserPF+2
+    stx LaserPF+4
+    stx LaserPF+5
+    rts
+
+TitleAnimate SUBROUTINE
+    lda FrameCtr
+    cmp #255
+    bne .Anim
+    jsr TitleInitLaser
+    rts
+
+.Anim
+    and #1
+    bne .Return
+    lda Delay
+    beq .Finished
+    sec
+    sbc #1
+    sta Delay
+    cmp #TITLE_DELAY-20
+    bcs .HalfShift
+    sec
+    rol LaserPF+0
+    ror LaserPF+1
+    rol LaserPF+2
+    rol LaserPF+3
+    ror LaserPF+4
+    rol LaserPF+5
+    rts
+
+.HalfShift
+    rol LaserPF+0
+    ror LaserPF+1
+    rol LaserPF+2
+    rts
+
+.Finished
+    ldx #$ff
+    stx LaserPF+0
+    stx LaserPF+1
+    stx LaserPF+2
+    stx LaserPF+3
+    stx LaserPF+4
+    ldx #63
+    stx LaserPF+5
 .Return
     rts
 
@@ -631,13 +742,15 @@ GameKernel SUBROUTINE
     rts
 
 GameOverscan SUBROUTINE
-    lda #[LINES_OVERSCAN-1]*76/64
+    ; -2 because ShrinkerRowKernel consumes an extra line
+    lda #[LINES_OVERSCAN-2]*76/64
     sta TIM64T
 
     ; turn off display
     sta WSYNC
     lda #2
     sta VBLANK
+
     lda #COLOR_BLACK
     sta COLUBK
     sta COLUPF
@@ -860,8 +973,6 @@ RowKernel SUBROUTINE
 
     dey                             ; 2 (30)
     bpl .Row                        ; 2 (32)
-
-
     rts                             ; 6 (38)
 
 ShrinkerRowKernel SUBROUTINE
@@ -1043,7 +1154,7 @@ InitScreen SUBROUTINE
     ; init screen
     lda #8
     sta ScreenPosY
-    lda #1
+    lda #0
     sta ScreenSpeedY
     rts
 
@@ -1052,6 +1163,7 @@ InitPlayer SUBROUTINE
     lda #[SCREEN_WIDTH/2 - 4]
     sta PlyrPosX
     lda #0
+    sta PlyrSpeedX
     sta Score
     sta Score+1
     sta Score+2
@@ -1183,6 +1295,15 @@ HUDSetup SUBROUTINE
     sta SpritePtrs+9
     sta SpritePtrs+11
     rts
+
+#if 0
+ShipCollision SUBROUTINE
+    lda SpriteBR
+    beq .Return
+
+.Return
+    rts
+#endif
 
 LaserCollision SUBROUTINE
     ;lda JoyFire
@@ -2044,16 +2165,6 @@ PF_ROW_HEIGHT = * - PFPattern
 ;    dc.b $ff, $00, $00, $00, $00, $00, $00, $00
 ;    dc.b $00, $00, $00, $00, $00, $00, $00, $ff
 
-; Procedure tables
-ModeVertBlank
-    dc.w TitleVertBlank     ; MODE_TITLE
-    dc.w GameVertBlank      ; MODE_GAME
-ModeKernel
-    dc.w TitleKernel        ; MODE_TITLE
-    dc.w GameKernel         ; MODE_GAME
-ModeOverscan
-    dc.w TitleOverscan      ; MODE_TITLE
-    dc.w GameOverscan       ; MODE_GAME
 
     ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
 
