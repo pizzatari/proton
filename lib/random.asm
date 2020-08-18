@@ -1,6 +1,10 @@
-; Galois LFSR: 8 bit, $b8
+
+; -----------------------------------------------------------------------------
+; Desc:     Galois LFSR: 8 bit, $b8
+; Input:    A register (current random number)
+; Output:   A register (next random number)
+; -----------------------------------------------------------------------------
 RandGalois8 SUBROUTINE
-    lda RandNum
     bne .SkipInx
     inx             ; prevent zeros
 .SkipInx
@@ -8,5 +12,5 @@ RandGalois8 SUBROUTINE
     bcc .SkipEor
     eor #$b8
 .SkipEor
-    sta RandNum
     rts
+
