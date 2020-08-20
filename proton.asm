@@ -85,7 +85,7 @@ ACCEL_Y             =  1
 ACCEL_X             =  1
 FRICTION            =  1
 
-MAX_ROWS            = 11
+MAX_ROWS            = 12
 MAX_NUM_PTRS        = 6
 
 P0_OBJ              = 0
@@ -107,15 +107,18 @@ LASER_DAMAGE        = 4
 
 TITLE_DELAY         = 38
 
+RAND_SEED           = $fb11
 
 ; -----------------------------------------------------------------------------
 ; Variables
 ; -----------------------------------------------------------------------------
-    SEG.U ram
+    SEG.U RAM
     ORG $80
 
 ; Global vars
 FrameCtr        ds.b 1
+TopLFSR         ds.w 1              ; top row LFSR
+BotLFSR         ds.w 1              ; bottom row LFSR
 RowNum          ds.w 1              ; row number associated with the bottom row
 Mode            ds.b 1
 Delay           ds.b 1
@@ -123,6 +126,7 @@ SpritePtrs      ds.w MAX_NUM_PTRS
 Ptr             ds.w 1
 Temp            = Ptr
 Temp2           = Ptr+1
+RandLFSR        = TopLFSR
 MemEnd
 
     ORG MemEnd
@@ -147,7 +151,6 @@ PlyrLaser       ds.b 1
 
 ; sprite data (GRP0/GRP1)
 Sprites0        ds.b MAX_ROWS       ; gfx low byte = sprite type
-SpriteBR        ds.b 1              ; gfx low byte for bottom row
 Sprites1        ds.b MAX_ROWS       ; gfx low byte = sprite type
 SpritesHP       ds.b MAX_ROWS       ; doubles up as the hit points and color
 SpeedX0         ds.b MAX_ROWS
@@ -205,6 +208,22 @@ GfxPtr3         = SpritePtrs+6
 Reset
     sei
     CLEAN_START
+
+    lda #<RAND_SEED
+    sta TopLFSR
+    sta BotLFSR
+    lda #>RAND_SEED
+    sta TopLFSR+1
+    sta BotLFSR+1
+
+    ; TopLFSR must be MAX_ROWS ahead of BotLFSR
+    ldx #0
+    ldy #MAX_ROWS-1
+.InitRand
+    jsr RandGalois16
+    dey
+    bne .InitRand
+
     jsr TitleInitLaser
 
 Init
@@ -563,7 +582,6 @@ TitleInitLaser SUBROUTINE
     stx LaserPF+5
     rts
 
-#if 1
 TitleAnimate SUBROUTINE
     lda FrameCtr
     cmp #255
@@ -595,52 +613,6 @@ TitleAnimate SUBROUTINE
 
 .Return
     rts
-
-#else
-TitleAnimate SUBROUTINE
-    lda FrameCtr
-    cmp #255
-    bne .Anim
-    jsr TitleInitLaser
-    rts
-
-.Anim
-    and #1
-    bne .Return
-    lda Delay
-    beq .Finished
-    sec
-    sbc #1
-    sta Delay
-    cmp #TITLE_DELAY-20
-    bcs .HalfShift
-    sec
-    rol LaserPF+0
-    ror LaserPF+1
-    rol LaserPF+2
-    rol LaserPF+3
-    ror LaserPF+4
-    rol LaserPF+5
-    rts
-
-.HalfShift
-    rol LaserPF+0
-    ror LaserPF+1
-    rol LaserPF+2
-    rts
-
-.Finished
-    ldx #$ff
-    stx LaserPF+0
-    stx LaserPF+1
-    stx LaserPF+2
-    stx LaserPF+3
-    stx LaserPF+4
-    ldx #63
-    stx LaserPF+5
-.Return
-    rts
-#endif
 
 ; -----------------------------------------------------------------------------
 ; Game code
@@ -700,12 +672,13 @@ GameVertBlank SUBROUTINE
     sta ENAM0
     beq .Continue
     stx LaserAudioFrame
-    jsr LaserCollision
+    jsr DetectPlayerHit
 .Continue
 
     lda #>BlankGfx
     sta GfxPtr0+1
     sta GfxPtr1+1
+    sta GfxPtr2+1
     sta GfxPtr3+1
 
     ; setup top row sprite graphics
@@ -714,16 +687,16 @@ GameVertBlank SUBROUTINE
     lda Sprites1+MAX_ROWS-1
     sta GfxPtr1
 
-    ; setup bottom row graphics
-    lda Sprites1
+    ; setup bottom two rows of graphics
+    lda Sprites1+1
     sec
     sbc #PF_ROW_HEIGHT
     sta GfxPtr2
-    lda #>BlankGfx
+    lda GfxPtr2+1
     sbc #0
     sta GfxPtr2+1
 
-    lda SpriteBR
+    lda Sprites1
     sta GfxPtr3
 
     lda #COLOR_LASER
@@ -748,9 +721,11 @@ GameVertBlank SUBROUTINE
 
 GameKernel SUBROUTINE
     ; executes between 1 and 16 lines
-    ldy #10
+    ldy #11
     jsr ExpanderRowKernel
     SLEEP 7
+    ldy #10
+    jsr RowKernel
     ldy #9
     jsr RowKernel
     ldy #8
@@ -767,9 +742,6 @@ GameKernel SUBROUTINE
     jsr RowKernel
     ldy #2
     jsr RowKernel
-    ldy #1
-    jsr RowKernel
-    ;ldy #0
     jsr ShrinkerRowKernel
 
     jsr HUDSetup
@@ -1202,6 +1174,12 @@ InitPlayer SUBROUTINE
     sta Score
     sta Score+1
     sta Score+2
+    lda #50
+    sta PlyrHP
+    lda #3
+    sta PlyrLives
+    lda #0
+    sta PlyrLaser
     rts
 
 SpawnGroundSprites SUBROUTINE
@@ -1331,19 +1309,15 @@ HUDSetup SUBROUTINE
     sta SpritePtrs+11
     rts
 
-#if 0
-ShipCollision SUBROUTINE
-    lda SpriteBR
+DetectCollision SUBROUTINE
+    lda Sprites0
     beq .Return
+
 
 .Return
     rts
-#endif
 
-LaserCollision SUBROUTINE
-    ;lda JoyFire
-    ;beq .Return
-
+DetectPlayerHit SUBROUTINE
     lda #0
     sta Temp
     
@@ -1407,14 +1381,19 @@ LaserCollision SUBROUTINE
 
 SpritePtrsClear SUBROUTINE
     lda #<BlankGfx
-    ldx #>BlankGfx
-    ldy #MAX_NUM_PTRS*2-2
-.Gfx
-    sta SpritePtrs,y
-    stx SpritePtrs+1,y
-    dey
-    dey
-    bpl .Gfx
+    sta SpritePtrs
+    sta SpritePtrs+2
+    sta SpritePtrs+4
+    sta SpritePtrs+6
+    sta SpritePtrs+8
+    sta SpritePtrs+10
+    lda #>BlankGfx
+    sta SpritePtrs+1
+    sta SpritePtrs+3
+    sta SpritePtrs+5
+    sta SpritePtrs+7
+    sta SpritePtrs+9
+    sta SpritePtrs+11
     rts
 
 ShipUpdatePosition SUBROUTINE
@@ -1638,15 +1617,8 @@ SpawnSprite SUBROUTINE
     rts
 
 SpritesShiftDown SUBROUTINE
-    ; shift Sprites1 down
-    lda Sprites1
-    sta SpriteBR
-
-    lda Sprites1+1
-    sta Sprites1
-
     ; shift rows down
-    ldy #1
+    ldy #0
 .ShiftDown
     lda Sprites0+1,y
     sta Sprites0,y
@@ -1689,12 +1661,6 @@ SpritesShiftUp SUBROUTINE
     dey
     bne .ShiftUp
 
-    lda Sprites1
-    sta Sprites1+1
-
-    lda SpriteBR
-    sta Sprites1
-
     rts
 
 RowInc SUBROUTINE
@@ -1718,6 +1684,7 @@ RowDec SUBROUTINE
     rts
 
 SpawnInTop SUBROUTINE
+#if 0
     ; spawn ground object
     lda RowNum
     clc
@@ -1736,7 +1703,26 @@ SpawnInTop SUBROUTINE
     lsr
     and #1
     bne .Skip
+#endif
 
+    ldx #0
+    jsr RandGalois16
+    ldx #2
+    jsr RandGalois16
+
+    ; spawn ground object
+    lda TopLFSR
+    and #7
+    tax
+    lda GroundSprites,x
+    sta Sprites1+MAX_ROWS-1
+
+    ; spawn enemy fighter
+    lda TopLFSR+1
+    and #1
+    beq .Skip
+
+    ; initialize
     lda #<FighterGfx
     sta Sprites0+MAX_ROWS-1
     lda #50
@@ -1751,12 +1737,27 @@ SpawnInTop SUBROUTINE
 
 SpawnInBottom SUBROUTINE
     ; spawn ground object
+    ldx #0
+    jsr RandGaloisRev16
+    ldx #2
+    jsr RandGaloisRev16
+
+    ; spawn ground object
+    lda BotLFSR
+    and #7
+    tax
+    lda GroundSprites,x
+    sta Sprites1
+
+#if 0
+    ; spawn ground object
     lda RowNum
     jsr Jumble8
     and #7
     tax
     lda GroundSprites,x
-    sta SpriteBR
+    sta Sprites1
+#endif
 
 #if 0
     ; spawn enemies
