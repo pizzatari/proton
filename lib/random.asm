@@ -3,6 +3,8 @@
 ; RandLFSR is in little endian format.
 ; -----------------------------------------------------------------------------
 
+    IFCONST RAND_GALOIS8
+    IF RAND_GALOIS8 > 0
 ; -----------------------------------------------------------------------------
 ; Desc:     8-bit Galois LFSR with a $b8 as the tap.
 ; Input:    A register (current number)
@@ -19,14 +21,18 @@ RandGalois8 SUBROUTINE
     eor #$b8
 .SkipEor
     rts
+    ENDIF
+    ENDIF
 
+    IFCONST RAND_GALOIS16
+    IF RAND_GALOIS16 > 0
 ; -----------------------------------------------------------------------------
 ; Desc:     16-bit Galois LFSR with a $b400 as the tap.
 ; Input:    X register (selects which LFSR)
 ;           RandLFSR (current number)
 ; Output:   RandLFSR (next number)
 ; Notes:    Zero is an invalid state. Only numbers in the range 1-65535 are
-;           produced.
+;           produced. Numbers are little endian.
 ; -----------------------------------------------------------------------------
 RandGalois16 SUBROUTINE
     lsr RandLFSR+1,x    ; lfsr >>= 1
@@ -45,7 +51,7 @@ RandGalois16 SUBROUTINE
 ;           RandLFSR (current number)
 ; Output:   RandLFSR (previous number)
 ; Notes:    Zero is an invalid state. Only numbers in the range 1-255 are
-;           produced.
+;           produced. Numbers are little endian.
 ; -----------------------------------------------------------------------------
 RandGaloisRev16 SUBROUTINE
     asl RandLFSR,x      ; lfsr >>= 1
@@ -59,4 +65,27 @@ RandGaloisRev16 SUBROUTINE
     sta RandLFSR,x
 .Skip
     rts
+    ENDIF
+    ENDIF
 
+    IFCONST RAND_JUMBLE
+    IF RAND_JUMBLE > 0
+; -----------------------------------------------------------------------------
+; Desc:     Returns a jumbled version of the number given.
+; Input:    A register (row num)
+; Output:   A register (jumbled)
+; -----------------------------------------------------------------------------
+Jumble8 SUBROUTINE
+    lsr
+    and #$0f
+    tax
+    lda Reverse4,x
+    rts
+
+Reverse4
+    dc.b %00000000, %00001000, %00000100, %00001100
+    dc.b %00000010, %00001010, %00000110, %00001100
+    dc.b %00000001, %00001001, %00000101, %00001101
+    dc.b %00000011, %00001011, %00000111, %00001111
+    ENDIF
+    ENDIF

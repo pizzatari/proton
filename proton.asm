@@ -10,6 +10,13 @@
 ;
 ;       . . . . . . . . . . . . . . .
 ;       :  world                    :
+;       . . . . . . . . . . . . . . .
+;       :                           :
+;       . . . . . . . . . . . . . . .
+;       :                           :
+;       . . . . . . . . . . . . . . .
+;       :                           :
+;       . . . . . . . . . . . . . . .
 ;       :                           :
 ;   Row :___________________________:
 ;    10 |  screen                   | expander: 16px -> 1px 
@@ -30,10 +37,9 @@
 ;       |___________________________|
 ;     2 |                           |
 ;       |___________________________|
-;     1 |                           |
-;       |___________________________|
-;     0 |                           | shrinker: 31px -> 16px
-;       :           /_\             : player
+;     1 :                           :
+;       : . . . . . . . . . . . . . : shrinker: 31px -> 16px
+;     0 :           /_\             : player
 ;       :___________________________:
 ;       |      |             |      | HUD
 ;       |______|_____________|______|
@@ -94,11 +100,6 @@ M0_OBJ              = 2
 M1_OBJ              = 3
 BL_OBJ              = 4
 
-PLAYER_OBJ          = P0_OBJ
-ENEMY_OBJ           = P0_OBJ
-BUILDING_OBJ        = P1_OBJ
-MISSILE_OBJ         = M0_OBJ
-
 TYPE_ENEMY          = 0
 TYPE_BUILDING       = 1
 TYPE_ACTION         = 2
@@ -108,6 +109,7 @@ LASER_DAMAGE        = 4
 TITLE_DELAY         = 38
 
 RAND_SEED           = $fb11
+RAND_JUMBLE         = 1
 
 ; -----------------------------------------------------------------------------
 ; Variables
@@ -117,8 +119,8 @@ RAND_SEED           = $fb11
 
 ; Global vars
 FrameCtr        ds.b 1
-TopLFSR         ds.w 1              ; top row LFSR
-BotLFSR         ds.w 1              ; bottom row LFSR
+;TopLFSR         ds.w 1              ; top row LFSR
+;BotLFSR         ds.w 1              ; bottom row LFSR
 RowNum          ds.w 1              ; row number associated with the bottom row
 Mode            ds.b 1
 Delay           ds.b 1
@@ -126,7 +128,7 @@ SpritePtrs      ds.w MAX_NUM_PTRS
 Ptr             ds.w 1
 Temp            = Ptr
 Temp2           = Ptr+1
-RandLFSR        = TopLFSR
+RandLFSR        = SpritePtrs
 MemEnd
 
     ORG MemEnd
@@ -136,7 +138,8 @@ LaserPF         ds.c 6
 
     ORG MemEnd
 ; Game vars 
-Score           ds.b 3              ; BCD in MSB order
+Status          ds.b 1
+Score           ds.b 3          ; BCD in MSB order
 
 ; screen motion
 ScreenPosY      ds.b 1
@@ -145,19 +148,23 @@ ScreenSpeedY    ds.b 1
 ; player ship motion
 PlyrSpeedX      ds.b 1
 PlyrPosX        ds.b 1
-PlyrHP          ds.b 1
-PlyrLives       ds.b 1
+PlyrLife        ds.b 1          ; Bits 5-7 lives; Bits 0-4 shield
 PlyrLaser       ds.b 1
 
 ; sprite data (GRP0/GRP1)
-Sprites0        ds.b MAX_ROWS       ; gfx low byte = sprite type
-Sprites1        ds.b MAX_ROWS       ; gfx low byte = sprite type
-SpritesHP       ds.b MAX_ROWS       ; doubles up as the hit points and color
+Sprites0        ds.b MAX_ROWS   ; gfx low byte = sprite type
+Sprites1        ds.b MAX_ROWS   ; gfx low byte = sprite type
+SpritesHP       ds.b MAX_ROWS   ; encodes hit points and color
 SpeedX0         ds.b MAX_ROWS
-PosX0           ds.b MAX_ROWS
+PosX0           ds.b MAX_ROWS   ; encodes pos (8 bits) and nusiz (low 3 bits)
 
 JoyFire         ds.b 1
 LaserAudioFrame ds.b 1
+
+CurrRow         ds.b 1
+P0Ptr           ds.w 1
+P1Ptr           ds.w 1
+BotPtr          ds.w 1
 
 LocalVars       ds.b 4
 TempColor       = LocalVars+1
@@ -165,13 +172,15 @@ EndLine         = LocalVars+1
 PlyrIdx         = LocalVars+2
 HUDHeight       = LocalVars+1
 
-GfxPtr0         = SpritePtrs
-GfxPtr1         = SpritePtrs+2
-GfxPtr2         = SpritePtrs+4
-GfxPtr3         = SpritePtrs+6
-
     ECHO "RAM used =", (* - $80)d, "bytes"
     ECHO "RAM free =", (128 - (* - $80))d, "bytes" 
+
+
+ST_NORM         = 0
+ST_ALERT        = 1
+
+PL_LIVES_MASK   = %00111000
+PL_SHIELDS_MASK = %00000111
 
 ; -----------------------------------------------------------------------------
 ; Macros
@@ -208,25 +217,7 @@ GfxPtr3         = SpritePtrs+6
 Reset
     sei
     CLEAN_START
-
-    lda #<RAND_SEED
-    sta TopLFSR
-    sta BotLFSR
-    lda #>RAND_SEED
-    sta TopLFSR+1
-    sta BotLFSR+1
-
-    ; TopLFSR must be MAX_ROWS ahead of BotLFSR
-    ldx #0
-    ldy #MAX_ROWS-1
-.InitRand
-    jsr RandGalois16
-    dey
-    bne .InitRand
-
     jsr TitleInitLaser
-
-Init
     TIMER_WAIT  ; maintain stable line count if we got here from a reset
 
 FrameStart SUBROUTINE
@@ -396,7 +387,6 @@ TitleKernel SUBROUTINE      ; 6 (6)
     cpy #4                  ; 2 (7)
     bne .Laser0             ; 2 (9)
 
-#if 1
     ; ------------------------------------------------------------------------
     ; laser middle line
     ; ------------------------------------------------------------------------
@@ -420,24 +410,6 @@ TitleKernel SUBROUTINE      ; 6 (6)
     sta PF1                 ; 3 (45)
     lda LaserPF+5           ; 3 (48)
     sta PF2                 ; 3 (51)
-
-#else
-    ; ------------------------------------------------------------------------
-    ; laser middle line
-    ; ------------------------------------------------------------------------
-    lda (LaserPtr),y        ; 5 (14)
-    ldx #$ff                ; 2 (16)
-    ldy #0                  ; 2 (18)
-    sta GRP0                ; 3 (21)
-
-    sta WSYNC
-    stx PF0                 ; 3 (3)
-    stx PF1                 ; 3 (6)
-    stx PF2                 ; 3 (9)
-    SLEEP_38                ; 38 (47)
-    lda #$3f                ; 2 (49)
-    sta PF2                 ; 3 (52)
-#endif
 
     ; ------------------------------------------------------------------------
     ; laser bottom
@@ -621,6 +593,7 @@ GameInit SUBROUTINE
     jsr InitScreen
     jsr InitPlayer
     jsr SpritePtrsClear
+    jsr SpawnGroundSprites
 
     lda #30
     sta Delay
@@ -643,21 +616,35 @@ GameVertBlank SUBROUTINE
     lda #COLOR_FG
     sta COLUPF
 
-    ; spawn single row sprite on motion
-    jsr SpawnSprite
+    jsr ScreenScroll
+
+    lda #ST_ALERT
+    sta Status
 
     ; position 3 medium
-    lda #3
-    sta NUSIZ1
+    ;lda #3
+    ;sta NUSIZ1
+
+    ; top row ID
+    lda RowNum
+    clc
+    adc #MAX_ROWS-1
+    sta CurrRow
+
+    ; customize spacing
+    lda CurrRow                     ; 3
+    lsr                             ; 2
+    and #3                          ; 2
+    sta NUSIZ1                      ; 3 (9)
 
     ; positon sprites
-    ldx #ENEMY_OBJ
+    ldx #P0_OBJ
     lda PosX0+MAX_ROWS-1
     jsr HorizPosition
-    ldx #BUILDING_OBJ
+    ldx #P1_OBJ
     lda #76
     jsr HorizPosition
-    ldx #MISSILE_OBJ
+    ldx #M0_OBJ
     lda PlyrPosX
     clc
     adc #4          ; adjust offset
@@ -676,28 +663,24 @@ GameVertBlank SUBROUTINE
 .Continue
 
     lda #>BlankGfx
-    sta GfxPtr0+1
-    sta GfxPtr1+1
-    sta GfxPtr2+1
-    sta GfxPtr3+1
+    sta P0Ptr+1
+    sta P1Ptr+1
+    sta BotPtr+1
 
     ; setup top row sprite graphics
     lda Sprites0+MAX_ROWS-1
-    sta GfxPtr0
+    sta P0Ptr
     lda Sprites1+MAX_ROWS-1
-    sta GfxPtr1
+    sta P1Ptr
 
-    ; setup bottom two rows of graphics
+    ; setup bottom two sprite graphics
     lda Sprites1+1
     sec
     sbc #PF_ROW_HEIGHT
-    sta GfxPtr2
-    lda GfxPtr2+1
+    sta BotPtr
+    lda #>BlankGfx
     sbc #0
-    sta GfxPtr2+1
-
-    lda Sprites1
-    sta GfxPtr3
+    sta BotPtr+1
 
     lda #COLOR_LASER
     sta COLUP0
@@ -721,32 +704,338 @@ GameVertBlank SUBROUTINE
 
 GameKernel SUBROUTINE
     ; executes between 1 and 16 lines
-    ldy #11
+    ;ldy #11
     jsr ExpanderRowKernel
-    SLEEP 7
-    ldy #10
-    jsr RowKernel
-    ldy #9
-    jsr RowKernel
+                            ; 30 (30)
+    dec CurrRow             ; 5 (35)
+    ldy #10                 ; 2 (37) 
+    jsr RowKernel           ; 6 (43)
+                            ; 30 (30)
+    dec CurrRow             ; 5 (35)
+    ldy #9                  ; 2 (37)
+    jsr RowKernel           ; 6 (43)
+
+    dec CurrRow
     ldy #8
     jsr RowKernel
+
+    dec CurrRow
     ldy #7
     jsr RowKernel
+
+    dec CurrRow
     ldy #6
     jsr RowKernel
+
+    dec CurrRow
     ldy #5
     jsr RowKernel
+
+    dec CurrRow
     ldy #4
     jsr RowKernel
+
+    dec CurrRow
     ldy #3
     jsr RowKernel
+
+    dec CurrRow
     ldy #2
     jsr RowKernel
+
+    dec CurrRow
+    ldy #1
     jsr ShrinkerRowKernel
 
     jsr HUDSetup
     jsr HUDKernel
     rts
+
+    ALIGN 256, $ff
+KERNEL_BEGIN SET *
+
+ExpanderRowKernel SUBROUTINE
+    lda SpritesHP,y                 ; 4 (4)
+    sta TempColor                   ; 3 (7)
+
+    ; customize spacing
+    lda CurrRow                     ; 3 (10)
+    lsr                             ; 2 (12)
+    and #3                          ; 2 (14)
+    sta NUSIZ1                      ; 3 (17)
+
+    lda ScreenPosY                  ; 3 (20)
+    and #PF_ROW_HEIGHT-1            ; 2 (22)
+    tay                             ; 2 (24)
+.Row
+    lda (P1Ptr),y                   ; 5 (30)
+    sta GRP1                        ; 3 (33)
+    ldx PFPattern,y                 ; 4 (37)
+    lda ShipPalette,y               ; 4 (41)
+    adc TempColor                   ; 2 (43)
+
+    sta WSYNC
+    sta COLUP0                      ; 3 (3)
+    lda (P0Ptr),y                   ; 5 (8)
+    sta GRP0                        ; 3 (11)
+    stx PF0                         ; 3 (14)
+    stx PF1                         ; 3 (17)
+    stx PF2                         ; 3 (20)
+
+    dey                             ; 2 (22)
+    bpl .Row                        ; 2 (24)
+    rts                             ; 6 (30)
+
+RowKernel SUBROUTINE                ; 43 (43)
+    lda SpritesHP,y                 ; 4 (47)
+    sta TempColor                   ; 3 (50)
+
+    ldx #0                          ; 2 (52)
+    lda PosX0,y                     ; 4 (56)
+    jsr HorizPosition               ; 6 (62)
+
+    ; invoke fine horizontal positioning
+    sta WSYNC
+    sta HMOVE                       ; 3 (3)
+    lda PFPattern+PF_ROW_HEIGHT-2   ; 3 (6)
+    sta PF0                         ; 3 (9)
+    sta PF1                         ; 3 (12)
+    sta PF2                         ; 3 (15)
+    
+    ; setup sprite graphics pointer
+    lda Sprites0,y                  ; 4 (19)
+    sta P0Ptr                       ; 3 (22)
+    lda Sprites1,y                  ; 4 (26)
+    sta P1Ptr                       ; 3 (29)
+
+    ; customize spacing
+    lda CurrRow                     ; 3 (32)
+    lsr                             ; 2 (34)
+    and #3                          ; 2 (36)
+    sta NUSIZ1                      ; 3 (39)
+
+    ldy #PF_ROW_HEIGHT-3            ; 2 (41)
+.Row
+    lda (P1Ptr),y                   ; 5 (30)
+    sta GRP1                        ; 3 (33)
+    ldx PFPattern,y                 ; 4 (37)
+    lda ShipPalette,y               ; 4 (41)
+    adc TempColor                   ; 2 (43)
+
+    sta WSYNC
+    sta COLUP0                      ; 3 (3)
+    lda (P0Ptr),y                   ; 5 (8)
+    sta GRP0                        ; 3 (11)
+    stx PF0                         ; 3 (14)
+    stx PF1                         ; 3 (17)
+    stx PF2                         ; 3 (20)
+
+    dey                             ; 2 (22)
+    bpl .Row                        ; 2 (24)
+    rts                             ; 6 (30)
+
+ShrinkerRowKernel SUBROUTINE        ; 43 (43)
+    ; calculate ending line
+    lda ScreenPosY                  ; 3 (46)
+    and #PF_ROW_HEIGHT-1            ; 2 (48)
+    tax                             ; 2 (50)
+    inx                             ; 2 (52)    2 lines of horiz positioning
+    inx                             ; 2 (54)
+    stx EndLine                     ; 3 (57)
+
+    ; position player
+    ldx #P0_OBJ                     ; 2 (59)
+    lda PlyrPosX                    ; 4 (63)
+    jsr HorizPosition               ; 6 (69)
+
+    ; invoke fine horizontal positioning
+    sta WSYNC
+    sta HMOVE                       ; 3 (3)
+    lda PFPattern+PF_ROW_HEIGHT-2   ; 3 (6)
+    sta PF0                         ; 3 (9)
+    sta PF1                         ; 3 (12)
+    sta PF2                         ; 3 (15)
+
+    ; calculate index into ship graphics
+    lda #PF_ROW_HEIGHT*2-1          ; 2 (17)
+    eor EndLine                     ; 2 (19)
+    sta PlyrIdx                     ; 3 (22)
+
+    ; setup sprite graphics pointer
+    lda Sprites1                    ; 4 (26)
+    sta P1Ptr                       ; 3 (29)
+
+    ; customize spacing
+    lda CurrRow                     ; 3 (25)
+    lsr                             ; 2 (27)
+    and #3                          ; 2 (29)
+    sta NUSIZ1                      ; 3 (32)
+
+    ; fixed height top 14 pixels
+    ldy #PF_ROW_HEIGHT*2-3          ; 2 (34)
+.TopRow
+    lda (BotPtr),y                  ; 5 (36)
+    and MaskTop-2,y                 ; 4 (40)
+    sta GRP1                        ; 3 (43)
+
+    ldx PlyrIdx                     ; 3 (46)
+    lda ShipGfx-2,x                 ; 4 (50)
+    and MaskTable-2,x               ; 4 (54)
+    dex                             ; 2 (56)
+    stx PlyrIdx                     ; 3 (59)
+
+    sta WSYNC
+    sta GRP0                        ; 3 (3)
+    lda ShipPalette-2,x             ; 4 (7)
+    sta COLUP0                      ; 3 (10)
+    lda PFPattern,y                 ; 4 (14)
+    sta PF0                         ; 3 (17)
+    sta PF1                         ; 3 (20)
+    sta PF2                         ; 3 (23)
+
+    dey                             ; 2 (25)
+    cpy #PF_ROW_HEIGHT+2            ; 3 (28)
+    bcs .TopRow                     ; 2 (30)
+
+    ; customize spacing
+    lda CurrRow                     ; 3 (33)
+    sec
+    sbc #1                          ; 2 (35)    -1 (carry clear from above)
+    lsr                             ; 2 (27)
+    and #3                          ; 2 (37)
+    sta NUSIZ1                      ; 3 (40)
+
+    ; variable height bottom 13 to 1 pixels
+.BotRow
+    lda (P1Ptr),y                   ; 5 (36)
+    sta GRP1                        ; 3 (39)
+
+    ldx PlyrIdx                     ; 3 (42)
+    lda ShipGfx-2,x                 ; 4 (46)
+    and MaskTable-2,x               ; 4 (50)
+    dex                             ; 2 (52)
+    stx PlyrIdx                     ; 3 (55)
+
+    sta WSYNC
+    sta GRP0                        ; 3 (3)
+    lda ShipPalette-2,x             ; 4 (7)
+    sta COLUP0                      ; 3 (10)
+
+    lda PFPattern,y                 ; 4 (14)
+    sta PF0                         ; 3 (17)
+    sta PF1                         ; 3 (20)
+    sta PF2                         ; 3 (23)
+
+    dey                             ; 2 (25)
+    cpy EndLine                     ; 3 (28)
+    bcs .BotRow                     ; 2 (30)
+
+.Done
+    lda #0                          ; 2 (44)
+    sta NUSIZ1                      ; 3 (47)
+    sta WSYNC
+
+    sta GRP0                        ; 3 (3)
+    sta GRP1                        ; 3 (6)
+    sta ENAM0                       ; 3 (9)
+    sta COLUBK                      ; 3 (12)
+    sta PF0                         ; 3 (15)
+    sta PF1                         ; 3 (18)
+    sta PF2                         ; 3 (21)
+
+    rts                             ; 6 (27)
+
+    IF >KERNEL_BEGIN != >*
+        ECHO "(1) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
+    ENDIF
+
+    ALIGN 256, $ff
+KERNEL_BEGIN SET *
+HUDKernel SUBROUTINE                ; 24 (24)
+    lda #$ff                        ; 2 (26)
+    ldx #0                          ; 2 (28)
+    ldy #1                          ; 2 (30)
+
+    ; top border (3 lines)
+    sta WSYNC
+    stx COLUBK                      ; 3 (3)
+    stx COLUPF                      ; 3 (6)
+    sta PF0                         ; 3 (9)
+    stx PF1                         ; 3 (12)
+    stx PF2                         ; 3 (15)
+    ; reflect playfield
+    sty CTRLPF                      ; 3 (18)
+    sty VDELP0                      ; 3 (21)
+    sty VDELP1                      ; 3 (24)
+    stx GRP0                        ; 3 (27)
+    stx GRP1                        ; 3 (30)
+
+    ; X = 0 from above
+    ldy Status                      ; 3
+    lda StatusPos0,y                ; 4
+    ldy HUDPalette                  ; 3 (35)
+    jsr HorizPositionBG             ; 6 (41)
+
+    ldy Status                      ; 3
+    lda StatusPos1,y                ; 4
+    ldx #1                          ; 2 (4)
+    ldy HUDPalette+1                ; 3 (7)
+    jsr HorizPositionBG             ; 6 (13)
+
+    sta WSYNC
+    sta HMOVE                       ; 3 (3)
+
+    ; HUD color
+    lda FrameCtr                    ; 3 (6)
+    lsr                             ; 2 (8)
+    lsr                             ; 2 (10)
+    lsr                             ; 2 (12)
+    and #3                          ; 2 (14)
+    ora Status                      ; 3 (17)
+    tax                             ; 2 (19)
+    lda StatusColors,x              ; 4 (23)
+    sta COLUBK                      ; 3 (26)
+
+    ; text color
+    lda #COLOR_WHITE                ; 2 (28)
+    sta COLUP0                      ; 3 (31)
+    sta COLUP1                      ; 3 (34)
+
+    ; nusize positioning
+    ldx Status                      ; 3 (37)
+    lda StatusNusiz,x               ; 4 (41)
+    sta NUSIZ0                      ; 3 (44)
+    sta NUSIZ1                      ; 3 (47)
+
+    ldy #DIGIT_HEIGHT-1             ; 2 (49)
+    jsr DrawWideSprite56            ; 6 (55)
+
+    sta WSYNC
+    lda HUDPalette+1                ; 3 (3)
+    sta COLUBK                      ; 3 (6)
+
+    sta WSYNC
+    lda HUDPalette                  ; 3 (3)
+    sta COLUBK                      ; 3 (6)
+    lda #0                          ; 2 (8)
+    sta VDELP0                      ; 3 (11)
+    sta VDELP1                      ; 3 (14)
+    sta NUSIZ0                      ; 3 (17)
+    sta NUSIZ1                      ; 3 (20)
+
+    ; restore playfield
+    sta WSYNC
+    sta PF0                         ; 3 (3)
+    sta COLUBK                      ; 3 (6)
+    sta CTRLPF                      ; 3 (9)
+    sta PF1                         ; 3 (12)
+    sta PF2                         ; 3 (15)
+    rts                             ; 6 (12)
+
+    IF >KERNEL_BEGIN != >*
+        ECHO "(2) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
+    ENDIF
+
 
 GameOverscan SUBROUTINE
     ; -2 because ShrinkerRowKernel consumes an extra line
@@ -905,258 +1194,6 @@ GameIO SUBROUTINE
 .Return
     rts
 
-    ALIGN 256, $ff
-KERNEL_BEGIN SET *
-ExpanderRowKernel SUBROUTINE
-    lda ScreenPosY
-    and #PF_ROW_HEIGHT-1
-    tay
-.Row
-    ldx PFPattern,y                 ; 4 (37)
-    lda ShipPalette,y               ; 4 (41)
-    adc #COLOR_ENEMY                ; 2 (43)
-    sta WSYNC
-
-    sta COLUP0                      ; 3 (3)
-    lda (GfxPtr0),y                 ; 5 (8)
-    sta GRP0                        ; 3 (11)
-    lda (GfxPtr1),y                 ; 5 (16)
-    sta GRP1                        ; 3 (19)
-    stx PF0                         ; 3 (22)
-    stx PF1                         ; 3 (25)
-    stx PF2                         ; 3 (28)
-
-    dey                             ; 2 (30)
-    bpl .Row                        ; 2 (32)
-    rts                             ; 6 (38)
-
-RowKernel SUBROUTINE
-    lda SpritesHP,y                 ; 4 (4)
-    sta TempColor                   ; 3 (7)
-    
-    tya                             ; 2 (9)
-    pha                             ; 3 (12)
-
-    ldx #0                          ; 2 (14)
-    lda PosX0,y                     ; 4 (18)
-    jsr HorizPosition               ; 6 (24)
-
-    ; invoke fine horizontal positioning
-    sta WSYNC
-    sta HMOVE                       ; 3 (3)
-    ldy PFPattern+PF_ROW_HEIGHT-2   ; 3 (6)
-    sty PF0                         ; 3 (9)
-    sty PF1                         ; 3 (12)
-    sty PF2                         ; 3 (15)
-
-    ; setup sprite graphics pointer
-    pla                             ; 4 (19)
-    tay                             ; 2 (21)
-    lda Sprites0,y                  ; 4 (25)
-    sta GfxPtr0                     ; 3 (28)
-    lda Sprites1,y                  ; 4 (32)
-    sta GfxPtr1                     ; 3 (35)
-
-    ldy #PF_ROW_HEIGHT-3            ; 2 (37)
-.Row
-    ; texture indexed from 0 to PF_ROW_HEIGHT-1
-    lda PFPattern,y                 ; 4 (37)
-    tax                             ; 2 (39)
-    lda #COLOR_BUILDING             ; 2 (41)
-    sta COLUP1                      ; 3 (44)
-    lda ShipPalette,y               ; 4 (48)
-    adc TempColor                   ; 2 (50)
-    ;adc #COLOR_ENEMY               ; 2 (50)
-
-    sta WSYNC
-    sta COLUP0                      ; 3 (3)
-    lda (GfxPtr1),y                 ; 5 (8)
-    sta GRP1                        ; 3 (11)
-    stx PF0                         ; 3 (14)
-    stx PF1                         ; 3 (17)
-    lda (GfxPtr0),y                 ; 5 (22)
-    sta GRP0                        ; 3 (25)
-    stx PF2                         ; 3 (28)
-
-    dey                             ; 2 (30)
-    bpl .Row                        ; 2 (32)
-    rts                             ; 6 (38)
-
-ShrinkerRowKernel SUBROUTINE
-    ; position player
-    ldx #PLAYER_OBJ                 ; 2 (40)
-    lda PlyrPosX                    ; 4 (44)
-    jsr HorizPosition               ; 6 (50)
-
-    ; invoke fine horizontal positioning
-    sta WSYNC
-    sta HMOVE                       ; 3 (3)
-    ldy PFPattern+PF_ROW_HEIGHT-2   ; 3 (6)
-    sty PF0                         ; 3 (9)
-    sty PF1                         ; 3 (12)
-    sty PF2                         ; 3 (15)
-
-    ; calculate ending line
-    lda ScreenPosY                  ; 3 (18)
-    and #PF_ROW_HEIGHT-1            ; 2 (20)
-    tax                             ; 2 (22)
-    ; account for 2 lines of horiz positioning
-    inx                             ; 2 (24)
-    inx                             ; 2 (26)
-    stx EndLine                     ; 3 (29)
-
-    ; calculate index into ship graphics
-    lda #PF_ROW_HEIGHT*2-1          ; 2 (31)
-    eor EndLine                     ; 2 (33)
-    sta PlyrIdx                     ; 3 (36)
-
-    ; fixed height top 14 pixels
-    ldx #PF_ROW_HEIGHT*2-3          ; 2 (38)
-.TopRow
-    ldy PlyrIdx                     ; 3 (50)
-    lda ShipGfx-2,y                 ; 4 (54)
-    and MaskTable-2,y               ; 4 (58)
-    dec PlyrIdx                     ; 5 (63)
-
-    sta WSYNC
-    sta GRP0                        ; 3 (3)
-    lda ShipPalette-2,y             ; 4 (7)
-    sta COLUP0                      ; 3 (10)
-
-    txa                             ; 2 (12)
-    tay                             ; 2 (14)
-    lda PFPattern,y                 ; 4 (18)
-    sta PF0                         ; 3 (21)
-    sta PF1                         ; 3 (24)
-    sta PF2                         ; 3 (27)
-
-    lda (GfxPtr2),y                 ; 5 (32)
-    and MaskTop-2,y                 ; 4 (36)
-    sta GRP1                        ; 3 (39)
-
-    dex                             ; 2 (41)
-    cpx #PF_ROW_HEIGHT+2            ; 3 (44)
-    bcs .TopRow                     ; 2 (46)
-
-    ; variable height bottom 17 to 2 pixels
-.BotRow
-    ldy PlyrIdx                     ; 3 (46)
-    lda ShipGfx-2,y                 ; 4 (50)
-    and MaskTable-2,y               ; 4 (54)
-    dec PlyrIdx                     ; 5 (59)
-
-    sta WSYNC
-    sta GRP0                        ; 3 (3)
-    lda ShipPalette-2,y             ; 4 (7)
-    sta COLUP0                      ; 3 (10)
-
-    txa                             ; 2 (12)
-    tay                             ; 2 (14)
-    lda PFPattern,y                 ; 4 (18)
-    sta PF0                         ; 3 (21)
-    sta PF1                         ; 3 (24)
-    sta PF2                         ; 3 (27)
-
-    lda (GfxPtr3),y                 ; 5 (32)
-    sta GRP1                        ; 3 (35)
-
-    dex                             ; 2 (37)
-    cpx EndLine                     ; 3 (40)
-    bcs .BotRow                     ; 2 (42)
-
-.Done
-    lda #0                          ; 2 (44)
-    sta NUSIZ1                      ; 3 (47)
-    sta WSYNC
-
-    sta GRP0                        ; 3 (3)
-    sta GRP1                        ; 3 (6)
-    sta ENAM0                       ; 3 (9)
-    sta COLUBK                      ; 3 (12)
-    sta PF0                         ; 3 (15)
-    sta PF1                         ; 3 (18)
-    sta PF2                         ; 3 (21)
-
-    rts                             ; 6 (27)
-
-    IF >KERNEL_BEGIN != >*
-        ECHO "(1) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
-    ENDIF
-
-    ALIGN 256, $ff
-KERNEL_BEGIN SET *
-HUDKernel SUBROUTINE
-    lda #$ff                        ; 2 (8)
-    ldx #0                          ; 2 (10)
-    ldy #1                          ; 2 (12)
-
-    ; top border (3 lines)
-    sta WSYNC
-    stx COLUBK                      ; 3 (3)
-    stx COLUPF                      ; 3 (6)
-    sta PF0                         ; 3 (9)
-    stx PF1                         ; 3 (12)
-    stx PF2                         ; 3 (15)
-    ; reflect playfield
-    sty CTRLPF                      ; 3 (18)
-    sty VDELP0                      ; 3 (21)
-    sty VDELP1                      ; 3 (24)
-    stx GRP0                        ; 3 (27)
-    stx GRP1                        ; 3 (30)
-
-    ; status panel (X = 0 from above)
-    lda #71                         ; 2 (32)
-    ldy HUDPalette                  ; 3 (35)
-    jsr HorizPositionBG             ; 6 (41)
-
-    lda #71+8                       ; 2 (2)
-    ldx #1                          ; 2 (4)
-    ldy HUDPalette+1                ; 3 (7)
-    jsr HorizPositionBG             ; 6 (13)
-
-    lda HUDPalette+2                ; 3 (16)
-    sta WSYNC
-    sta HMOVE                       ; 3 (3)
-    sta COLUBK                      ; 3 (6)
-
-    ; 3 (9) copies, medium spaced
-    lda #%011                       ; 2 (11)
-    sta NUSIZ0                      ; 3 (14)
-    sta NUSIZ1                      ; 3 (17)
-
-    lda #COLOR_WHITE                ; 2 (19)
-    sta COLUP0                      ; 3 (22)
-    sta COLUP1                      ; 3 (25)
-
-    ldy #DIGIT_HEIGHT-1             ; 2 (27)
-    jsr DrawWideSprite56            ; returns on cycle 67
-
-    sta WSYNC
-    lda HUDPalette+1                ; 3 (3)
-    sta COLUBK                      ; 3 (6)
-
-    sta WSYNC
-    lda HUDPalette                  ; 3 (3)
-    sta COLUBK                      ; 3 (6)
-    lda #0                          ; 2 (8)
-    sta VDELP0                      ; 3 (11)
-    sta VDELP1                      ; 3 (14)
-    sta NUSIZ0                      ; 3 (17)
-    sta NUSIZ1                      ; 3 (20)
-
-    ; restore playfield
-    sta WSYNC
-    sta PF0                         ; 3 (3)
-    sta COLUBK                      ; 3 (6)
-    sta CTRLPF                      ; 3 (9)
-    sta PF1                         ; 3 (12)
-    sta PF2                         ; 3 (15)
-    rts                             ; 6 (12)
-
-    IF >KERNEL_BEGIN != >*
-        ECHO "(2) Kernels crossed a page boundary!", (KERNEL_BEGIN&$ff00), (*&$ff00)
-    ENDIF
-
 InitScreen SUBROUTINE
     ; init screen
     lda #8
@@ -1174,36 +1211,22 @@ InitPlayer SUBROUTINE
     sta Score
     sta Score+1
     sta Score+2
-    lda #50
-    sta PlyrHP
-    lda #3
-    sta PlyrLives
+    lda #[3 << 3] | 7
+    sta PlyrLife
     lda #0
     sta PlyrLaser
     rts
 
 SpawnGroundSprites SUBROUTINE
-    lda #0
-    ldy #MAX_ROWS-1
-.Loop
-    ora Sprites1,y
-    dey
-    bne .Loop
-
-    cmp #0
-    bne .Return
-
     ; populate sprites with some values
     ldy #MAX_ROWS-1
-.Pop
-    ; init sprite
-    ldx #<FuelGfx
-    stx Sprites1,y
-    ldx #<IndustryGfx
-    stx Sprites1+1,y
-    dey
-    dey
-    bne .Pop
+    sty Temp
+.Loop
+    jsr SpritesShiftDown
+    jsr RowInc
+    jsr SpawnInTop
+    dec Temp
+    bne .Loop
 
 .Return
     rts
@@ -1249,6 +1272,20 @@ SpawnEnemies SUBROUTINE
     rts
 
 HUDSetup SUBROUTINE
+    lda #>Digits
+    sta SpritePtrs+1
+    sta SpritePtrs+3
+    sta SpritePtrs+5
+    sta SpritePtrs+7
+    sta SpritePtrs+9
+    sta SpritePtrs+11
+
+    ldx Status
+    cpx #ST_ALERT
+    beq .Alert
+
+    sta SpritePtrs+1
+
     ldx Score
     txa
     and #$f0
@@ -1259,7 +1296,6 @@ HUDSetup SUBROUTINE
     tay
     lda DigitTable,y
     sta SpritePtrs
-
     txa
     and #$0f
     tay
@@ -1276,7 +1312,6 @@ HUDSetup SUBROUTINE
     tay
     lda DigitTable,y
     sta SpritePtrs+4
-
     txa
     and #$0f
     tay
@@ -1293,27 +1328,44 @@ HUDSetup SUBROUTINE
     tay
     lda DigitTable,y
     sta SpritePtrs+8
-
     txa
     and #$0f
     tay
     lda DigitTable,y
     sta SpritePtrs+10
+    rts
 
-    lda #>Digits
-    sta SpritePtrs+1
-    sta SpritePtrs+3
-    sta SpritePtrs+5
-    sta SpritePtrs+7
-    sta SpritePtrs+9
-    sta SpritePtrs+11
+.Alert
+    lda #<WaveGfx
+    sta SpritePtrs
+    lda #<ShieldGfx
+    sta SpritePtrs+4
+    lda #<LifeGfx
+    sta SpritePtrs+8
+
+    lda #<Digit1
+    sta SpritePtrs+2
+
+    ; player lives
+    lda PlyrLife
+    and #PL_SHIELDS_MASK
+    tay
+    lda DigitTable,y
+    sta SpritePtrs+6
+
+    ; player lives
+    lda PlyrLife
+    lsr
+    lsr
+    lsr
+    tay
+    lda DigitTable,y
+    sta SpritePtrs+10
     rts
 
 DetectCollision SUBROUTINE
     lda Sprites0
     beq .Return
-
-
 .Return
     rts
 
@@ -1471,7 +1523,7 @@ UpdateVerticalPositions SUBROUTINE
 ; -----------------------------------------------------------------------------
 HorizPosition SUBROUTINE
     sec             ; 2 (2)
-    sta WSYNC
+    sta WSYNC       ; 3 (5) 
 
     ; coarse position timing
 .Div15
@@ -1491,25 +1543,25 @@ HorizPosition SUBROUTINE
     rts
 
 ; performs horizontal positioning while drawing a background color
-HorizPositionBG SUBROUTINE
+HorizPositionBG SUBROUTINE  ; 6 (6)
     sec             ; 2 (8)
-    sta WSYNC       ; 3 (11)
+    sta WSYNC
     sty COLUBK      ; 3 (3)
     sbc #15         ; 2 (5)
 
 .Div15
-    sbc #15         ; 2 (2)
-    bcs .Div15      ; 3 (5)
+    sbc #15         ; 2 (7)
+    bcs .Div15      ; 3 (10)
 
-    eor #7          ; 2 (11)
-    asl             ; 2 (13)
-    asl             ; 2 (15)
-    asl             ; 2 (17)
-    asl             ; 2 (19)
+    eor #7          ; 2 (12)
+    asl             ; 2 (14)
+    asl             ; 2 (16)
+    asl             ; 2 (18)
+    asl             ; 2 (20)
 
-    sta RESP0,X     ; 4 (23)
-    sta HMP0,X      ; 4 (27)
-    rts
+    sta RESP0,X     ; 4 (24)
+    sta HMP0,X      ; 4 (28)
+    rts             ; 6 (34)
 
 ; performs horizontal positioning while drawing a playfield pattern
 ; this must enter on or before cycle 62
@@ -1580,7 +1632,7 @@ PlayAudio SUBROUTINE
 
     rts
 
-SpawnSprite SUBROUTINE
+ScreenScroll SUBROUTINE
     ; if motionless, do nothing
     ; if traveling forward when Y = 0, then spawn a new top row
     ; if traveling backward when Y = 15, then spawn a new bottom row
@@ -1596,10 +1648,8 @@ SpawnSprite SUBROUTINE
     sbc #PF_ROW_HEIGHT
     sta ScreenPosY
     jsr SpritesShiftDown
-
     jsr RowInc
     jsr SpawnInTop
-
     jmp .Return
 
 .Reverse
@@ -1609,7 +1659,6 @@ SpawnSprite SUBROUTINE
     adc #PF_ROW_HEIGHT
     sta ScreenPosY
     jsr SpritesShiftUp
-
     jsr RowDec
     jsr SpawnInBottom
 
@@ -1684,41 +1733,18 @@ RowDec SUBROUTINE
     rts
 
 SpawnInTop SUBROUTINE
-#if 0
-    ; spawn ground object
+    ; spawn ground structure
     lda RowNum
     clc
-    adc #MAX_ROWS-1     ; top row number
+    adc #MAX_ROWS-1
     jsr Jumble8
     and #7
     tax
     lda GroundSprites,x
     sta Sprites1+MAX_ROWS-1
 
-    ; spawn enemies
-    lda #<BlankGfx
-    sta Sprites0+MAX_ROWS-1
-    lda RowNum
-    lsr
-    lsr
-    and #1
-    bne .Skip
-#endif
-
-    ldx #0
-    jsr RandGalois16
-    ldx #2
-    jsr RandGalois16
-
-    ; spawn ground object
-    lda TopLFSR
-    and #7
-    tax
-    lda GroundSprites,x
-    sta Sprites1+MAX_ROWS-1
-
-    ; spawn enemy fighter
-    lda TopLFSR+1
+    ; spawn enemy
+    lda RandLFSR+1
     and #1
     beq .Skip
 
@@ -1736,31 +1762,16 @@ SpawnInTop SUBROUTINE
     rts
 
 SpawnInBottom SUBROUTINE
-    ; spawn ground object
-    ldx #0
-    jsr RandGaloisRev16
-    ldx #2
-    jsr RandGaloisRev16
-
-    ; spawn ground object
-    lda BotLFSR
-    and #7
-    tax
-    lda GroundSprites,x
-    sta Sprites1
-
-#if 0
-    ; spawn ground object
+    ; spawn ground structure
     lda RowNum
     jsr Jumble8
     and #7
     tax
     lda GroundSprites,x
     sta Sprites1
-#endif
 
 #if 0
-    ; spawn enemies
+    ; spawn enemy
     lda #<BlankGfx
     sta Sprites0
     lda RowNum
@@ -1780,24 +1791,6 @@ SpawnInBottom SUBROUTINE
 .Skip
 #endif
     rts
-
-; -----------------------------------------------------------------------------
-; Desc:     Returns a jumbled version of the number given.
-; Input:    A register (row num)
-; Output:   A register (jumbled)
-; -----------------------------------------------------------------------------
-Jumble8 SUBROUTINE
-    lsr
-    and #$0f
-    tax
-    lda Reverse4,x
-    rts
-
-Reverse4
-    dc.b %00000000, %00001000, %00000100, %00001100
-    dc.b %00000010, %00001010, %00000110, %00001100
-    dc.b %00000001, %00001001, %00000101, %00001101
-    dc.b %00000011, %00001011, %00000111, %00001111
 
     ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
 
@@ -1831,6 +1824,9 @@ LaserGfx1
     dc.b %00101000
     dc.b %01010100
     dc.b %00010000
+
+NusizPattern
+    dc.b 3, 1, 6, 3, 4, 2, 0, 3
 
     ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
 
@@ -2158,11 +2154,34 @@ Digit9
     dc.b %00111110
     dc.b %01100110
     dc.b %00111100
+WaveGfx
+    dc.b %00000000
+    dc.b %11001100
+    dc.b %11111110
+    dc.b %11010110
+    dc.b %11000110
+    dc.b %01100011
+    dc.b %01100011
+ShieldGfx
+    dc.b %00000000
+    dc.b %00010000
+    dc.b %00111000
+    dc.b %01111100
+    dc.b %01111100
+    dc.b %01111100
+    dc.b %00101000
+LifeGfx
+    dc.b %00000000
+    dc.b %01000100
+    dc.b %01111100
+    dc.b %01111100
+    dc.b %01111100
+    dc.b %01010100
+    dc.b %00111000
 
     IF >GFX_BEGIN != >*
         ECHO "(2) Gfx crossed a page boundary!", (GFX_BEGIN&$ff00), *
     ENDIF
-
 
 #if 0
 SpriteType
@@ -2200,6 +2219,31 @@ PF_ROW_HEIGHT = * - PFPattern
 ;PF_ROW_HEIGHT = * - PFPattern
 ;    dc.b $ff, $00, $00, $00, $00, $00, $00, $00
 ;    dc.b $00, $00, $00, $00, $00, $00, $00, $ff
+
+StatusColors
+    ; Bit:  0 (mode)
+    ; Bit:  1 (ctr)
+    ;    00         01
+    dc.b COLOR_BLUE, COLOR_BLUE
+    ;    10         11
+    dc.b COLOR_BLUE, COLOR_RED
+
+StatusNusiz
+    dc.b 3      ; ST_NORM
+    dc.b 6      ; ST_ALERT
+
+StatusPos0
+    dc.b 71     ; ST_NORM
+    dc.b 55     ; ST_ALERT
+StatusPos1
+    dc.b 79     ; ST_NORM
+    dc.b 63     ; ST_ALERT
+
+Mult7
+    dc.b   0,   7,  14,  21,  28,  35,  42,  49,  56,  63
+    ;dc.b  70,  77,  84,  91,  98, 105, 112, 119, 126, 133
+    ;dc.b 140, 147, 154, 161, 168, 175, 182, 189, 196, 203
+    ;dc.b 210, 217, 224, 231, 238, 245, 252
 
 
     ECHO "Page", *&$ff00, "has", (* - (*&$ff00))d, "bytes remaining"
