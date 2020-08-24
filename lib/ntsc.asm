@@ -24,6 +24,7 @@ COLOR_GRAY          = $06
 COLOR_LGRAY         = $08
 COLOR_RED           = $42
 COLOR_YELLOW        = $1c
+COLOR_BLUE          = $86
 
 TitlePalette
     dc.b $c0
@@ -91,7 +92,7 @@ EnemyPalette
     dc.b COLOR_LASER
 
 HUDPalette
-    dc.b $08, $00, $80
+    dc.b $08, $00; , $80
 
 ;ShipPalette0
 ;    ;      1    2    3    4    5    6    7    8    9   10   11
