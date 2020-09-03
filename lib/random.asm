@@ -1,6 +1,6 @@
 ; -----------------------------------------------------------------------------
-; These procedures depend on 2 bytes of RAM, so allocate 2 bytes for RandLFSR.
-; RandLFSR is in little endian format.
+; These procedures depend on 2 bytes of RAM, so allocate 2 bytes for RandLFSR16.
+; RandLFSR16 is in little endian format.
 ; -----------------------------------------------------------------------------
 
     IFCONST RAND_GALOIS8
@@ -13,9 +13,6 @@
 ;           produced.
 ; -----------------------------------------------------------------------------
 RandGalois8 SUBROUTINE
-    bne .SkipInx
-    inx             ; prevent zeros
-.SkipInx
     lsr
     bcc .SkipEor
     eor #$b8
@@ -29,18 +26,18 @@ RandGalois8 SUBROUTINE
 ; -----------------------------------------------------------------------------
 ; Desc:     16-bit Galois LFSR with a $b400 as the tap.
 ; Input:    X register (selects which LFSR)
-;           RandLFSR (current number)
-; Output:   RandLFSR (next number)
+;           RandLFSR16 (current number)
+; Output:   RandLFSR16 (next number)
 ; Notes:    Zero is an invalid state. Only numbers in the range 1-65535 are
 ;           produced. Numbers are little endian.
 ; -----------------------------------------------------------------------------
 RandGalois16 SUBROUTINE
-    lsr RandLFSR+1,x    ; lfsr >>= 1
-    ror RandLFSR,x
+    lsr RandLFSR16+1,x      ; lfsr >>= 1
+    ror RandLFSR16,x
     bcc .Skip
     lda #$b4
-    eor RandLFSR+1,x    ; lfsr ^= 0xb400
-    sta RandLFSR+1,x
+    eor RandLFSR16+1,x      ; lfsr ^= 0xb400
+    sta RandLFSR16+1,x
 .Skip
     rts
 
@@ -48,21 +45,21 @@ RandGalois16 SUBROUTINE
 ; Desc:     Same as RandGalois16 but generates the sequence in reverse and
 ;           uses $6801 as the tap.
 ; Input:    X register (selects which LFSR)
-;           RandLFSR (current number)
-; Output:   RandLFSR (previous number)
+;           RandLFSR16 (current number)
+; Output:   RandLFSR16 (previous number)
 ; Notes:    Zero is an invalid state. Only numbers in the range 1-255 are
 ;           produced. Numbers are little endian.
 ; -----------------------------------------------------------------------------
 RandGaloisRev16 SUBROUTINE
-    asl RandLFSR,x      ; lfsr >>= 1
-    rol RandLFSR+1,x
+    asl RandLFSR16,x        ; lfsr >>= 1
+    rol RandLFSR16+1,x
     bcc .Skip
     lda #$68
-    eor RandLFSR+1,x    ; lfsr ^= 0x6801
-    sta RandLFSR+1,x
+    eor RandLFSR16+1,x      ; lfsr ^= 0x6801
+    sta RandLFSR16+1,x
     lda #$01
-    eor RandLFSR,x
-    sta RandLFSR,x
+    eor RandLFSR16,x
+    sta RandLFSR16,x
 .Skip
     rts
     ENDIF

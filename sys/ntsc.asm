@@ -25,6 +25,7 @@ COLOR_LGRAY         = $08
 COLOR_RED           = $42
 COLOR_YELLOW        = $1c
 COLOR_BLUE          = $86
+COLOR_ORANGE        = $3a
 
 TitlePalette
     dc.b $c0
