@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+*.h text=crlf
+*.asm text=crlf
+*.mpf text=crlf
+*.msp text=crlf
+*.pf text=crlf
+*.sp text=crlf
+*.s text=crlf
