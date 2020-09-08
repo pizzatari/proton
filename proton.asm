@@ -2010,7 +2010,42 @@ DigitTable
     dc.b <Digit5, <Digit6, <Digit7, <Digit8, <Digit9
 
     PAGE_BOUNDARY_SET
-    include "lib/draw.asm'
+; -----------------------------------------------------------------------------
+; Desc:     Draws a 48-bit wide sprite centered on the screen using the
+;           Dragster algorithm.
+; Input:    Y register (height-1)
+; Output:
+; Notes:    Position GRP0 to TIA cycle 124 (on-screen pixel 56)
+;           Position GRP1 to TIA cycle 132 (on-screen pixel 64)
+; -----------------------------------------------------------------------------
+DrawWideSprite56 SUBROUTINE ; 6 (6)
+    sty Temp                ; 3 (9)
+.Loop
+    ;                            CPU   TIA   GRP0  GRP0A    GRP1  GRP1A
+    ; -------------------------------------------------------------------------
+    ldy Temp                ; 3 (65)  (195)
+    lda (SpritePtrs),y      ; 5 (70)  (210)
+    sta GRP0                ; 3 (73)  (219)    D1     --      --     --
+    sta WSYNC               ; 3  (0)    (0)
+    ; -------------------------------------------------------------------------
+    lda (SpritePtrs+2),y    ; 5  (5)   (15)
+    sta GRP1                ; 3  (8)   (24)    D1     D1      D2     --
+    lda (SpritePtrs+4),y    ; 5 (13)   (39)
+    sta GRP0                ; 3 (16)   (48)    D3     D1      D2     D2
+    lda (SpritePtrs+6),y    ; 5 (21)   (63)
+    sta Temp2               ; 3 (24)   (72)
+    lda (SpritePtrs+8),y    ; 5 (29)   (87)
+    tax                     ; 2 (31)   (93)
+    lda (SpritePtrs+10),y   ; 5 (36)  (108)
+    tay                     ; 2 (38)  (114)
+    lda Temp2               ; 3 (41)  (123)             !
+    sta GRP1                ; 3 (44)  (132)    D3     D3      D4     D2!
+    stx GRP0                ; 3 (47)  (141)    D5     D3!     D4     D4
+    sty GRP1                ; 3 (50)  (150)    D5     D5      D6     D4!
+    sta GRP0                ; 3 (53)  (159)    D4*    D5!     D6     D6
+    dec Temp                ; 5 (58)  (174)                            !
+    bpl .Loop               ; 3 (61)  (183) 
+    rts                     ; 6 (67)
 
 ; positioned on TIA cycle 72 and 80 (on-screen pixel 4 and 12)
 DrawTitleSprite SUBROUTINE
@@ -2062,7 +2097,87 @@ DrawTitleSprite SUBROUTINE
     sta PF2                 ; 3 (12)
     rts                     ; 6 (18)
 
-    include "lib/position.asm"
+; -----------------------------------------------------------------------------
+; Desc:     Positions an object horizontally using the Battlezone algorithm.
+; Input:    A register (screen pixel position)
+;           X register (object index: 0 to 4)
+; Output:   A register (fine positioning value)
+;
+;           Object indexes:
+;               0 = Player 0
+;               1 = Player 1
+;               2 = Missile 0
+;               3 = Missile 1
+;               4 = Ball
+;
+;           Follow up with:
+;               sta WSYNC
+;               sta HMOVE
+; -----------------------------------------------------------------------------
+HorizPosition SUBROUTINE
+    sec             ; 2 (2)
+    sta WSYNC       ; 3 (5) 
+
+    ; coarse position timing
+.Div15
+    sbc #15         ; 2 (2)
+    bcs .Div15      ; 3 (5)
+
+    ; computing fine positioning value
+    eor #7          ; 2 (11)            ; 4 bit signed subtraction
+    asl             ; 2 (13)
+    asl             ; 2 (15)
+    asl             ; 2 (17)
+    asl             ; 2 (19)
+
+    ; position
+    sta RESP0,X     ; 4 (23)            ; coarse position
+    sta HMP0,X      ; 4 (27)            ; fine position
+    rts
+
+; performs horizontal positioning while drawing a background color
+HorizPositionBG SUBROUTINE  ; 6 (6)
+    sec             ; 2 (8)
+    sta WSYNC
+    sty COLUBK      ; 3 (3)
+    sbc #15         ; 2 (5)
+
+.Div15
+    sbc #15         ; 2 (7)
+    bcs .Div15      ; 3 (10)
+
+    eor #7          ; 2 (12)
+    asl             ; 2 (14)
+    asl             ; 2 (16)
+    asl             ; 2 (18)
+    asl             ; 2 (20)
+
+    sta RESP0,X     ; 4 (24)
+    sta HMP0,X      ; 4 (28)
+    rts             ; 6 (34)
+
+; performs horizontal positioning while drawing a playfield pattern
+; this must enter on or before cycle 62
+HorizPositionPF SUBROUTINE
+    sty PF0         ; 3 (65)
+    sec             ; 2 (67)
+    sty PF1         ; 3 (70)
+    sty PF2         ; 3 (73)
+    sta WSYNC       ; 3 (76)
+
+.Div15
+    sbc #15         ; 4 (7)
+    bcs .Div15      ; 5 (12)
+
+    eor #7          ; 2 (14)
+    asl             ; 2 (16)
+    asl             ; 2 (18)
+    asl             ; 2 (20)
+    asl             ; 2 (22)
+
+    sta RESP0,X     ; 4 (26)
+    sta HMP0,X      ; 4 (30)
+    rts
 
     PAGE_BOUNDARY_CHECK "(4) Kernels"
     PAGE_BYTES_REMAINING
