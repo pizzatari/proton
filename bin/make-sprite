@@ -5,7 +5,7 @@ use File::Basename;
 
 use constant DEFAULT_BLANK_LABEL => "BlankSprite";
 
-use constant IN_FILE_SUFFIX => ".msp";
+use constant IN_FILE_SUFFIX => ".sprite";
 use constant OUT_FILE_SUFFIX => ".sp";
 
 use constant NUM_PIXELS_WIDE => 48;
