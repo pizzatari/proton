@@ -8,14 +8,15 @@ MAKE_PFIELD = ./bin/make-playfield
 ASM_FLAGS   = -v0 -f3 -l"$*.lst" -s"$*.sym" 
 
 DEPS_ASM	= $(wildcard ./lib/*.asm) $(wildcard ./gfx/*.asm) \
-				$(wildcard bank?/*.asm) $(wildcard bank?/gfx/*.asm)
-DEPS_H		= $(wildcard ./include/*.h)
+			$(wildcard bank?/*.asm) $(wildcard bank?/gfx/*.asm) \
+			$(wildcard ./sys/*.asm)
+DEPS_H		= $(wildcard ./include/*.h) $(wildcard ./sys/*.h)
 
 DEPS_M4		= $(wildcard ./lib/*.m4)
 DEPS_S		= $(DEPS_M4:.m4=.s)
 
-DEPS_MSP	= $(wildcard ./gen/*.msp) $(wildcard ./bank?/gen/*.msp)
-DEPS_SP		= $(DEPS_MSP:.msp=.sp)
+DEPS_MSP	= $(wildcard ./gen/*.sprite) $(wildcard ./bank?/gen/*.sprite)
+DEPS_SP		= $(DEPS_MSP:.sprite=.sp)
 
 DEPS_MPF	= $(wildcard ./gen/*.mpf) $(wildcard ./bank?/gen/*.mpf)
 DEPS_PF		= $(DEPS_MPF:.mpf=.pf)
@@ -30,7 +31,7 @@ $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM) $(DEPS_H)
 %.bin: %.asm
 	$(ASM) "$<" $(ASM_FLAGS) -o"$@"
 
-%.sp: %.msp $<
+%.sp: %.sprite $<
 	$(PERL) $(MAKE_SPRITE) "$<" -o"$@"
 
 %.pf: %.mpf
@@ -44,5 +45,6 @@ $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM) $(DEPS_H)
 
 .PHONY: clean
 clean:
-	find . -iname '*.bin' -or -iname '*.lst' -or -iname '*.sym' -or -iname '*.pf' -or -iname '*.sp' \
-		-exec rm -fv {} +
+	find . "(" -iname '*.bin' -or -iname '*.lst' -or -iname '*.sym' \
+	-or -iname '*.pf' -or -iname '*.sp' -or -name "*.exe" ")" \
+	-exec rm -fv {} +
