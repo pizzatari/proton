@@ -25,6 +25,7 @@ TARGET		= proton.bin
 
 .PHONY: all
 all: $(TARGET) 
+	chmod ug+x $(TARGET)
 
 $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM) $(DEPS_H)
 
@@ -32,7 +33,7 @@ $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM) $(DEPS_H)
 	$(ASM) "$<" $(ASM_FLAGS) -o"$@"
 
 %.sp: %.sprite $<
-	$(PERL) $(MAKE_SPRITE) "$<" -o"$@"
+	$(PERL) $(MAKE_SPRITE) "$<" -o"$@" -H1
 
 %.pf: %.mpf
 	$(PERL) $(MAKE_PFIELD) "$<" > $@
@@ -42,6 +43,12 @@ $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM) $(DEPS_H)
 
 %.bin: %.s $<
 	$(ASM) "$<" $(ASM_FLAGS) -o"$@"
+
+.PHONY: deploy
+deploy: all
+	cp *.bin *.lst *.sym /var/www/html/roms/
+	chmod ugo+r /var/www/html/roms/*.bin
+	@echo Copying to: http://98.225.37.203/roms/
 
 .PHONY: clean
 clean:

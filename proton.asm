@@ -97,6 +97,7 @@ FRICTION            =  1
 MAX_ROWS            = 12
 MAX_NUM_PTRS        = 6
 
+; Objects
 P0_OBJ              = 0
 P1_OBJ              = 1
 M0_OBJ              = 2
