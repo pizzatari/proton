@@ -1,50 +1,50 @@
-TitleProtonBegin SET *
-TitleProton0
-    dc.b %00100000
-    dc.b %00100000
-    dc.b %00100000
-    dc.b %00100000
-    dc.b %11100000
-    dc.b %10100000
-    dc.b %11100000
-TITLEPROTON_HEIGHT = * - TitleProtonBegin
-TitleProton1
-    dc.b %01001110
-    dc.b %01001010
-    dc.b %01001010
-    dc.b %01001010
-    dc.b %01001010
-    dc.b %01001010
-    dc.b %01101110
-TitleProton2
-    dc.b %01110010
-    dc.b %01010010
-    dc.b %01010010
-    dc.b %01010010
-    dc.b %01010010
-    dc.b %01010010
-    dc.b %01110111
-TitleProton3
-    dc.b %01010000
-    dc.b %01010000
-    dc.b %01010000
-    dc.b %01010000
-    dc.b %01010000
-    dc.b %01010000
-    dc.b %01110000
-TitleProton4
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-TitleProton5
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
-    dc.b %00000000
+TitleProtonBegin SET *
+TitleProton0
+    dc.b %00100000
+    dc.b %00100000
+    dc.b %00100000
+    dc.b %00100000
+    dc.b %11100000
+    dc.b %10100000
+    dc.b %11100000
+TITLEPROTON_HEIGHT = * - TitleProtonBegin
+TitleProton1
+    dc.b %01001110
+    dc.b %01001010
+    dc.b %01001010
+    dc.b %01001010
+    dc.b %01001010
+    dc.b %01001010
+    dc.b %01101110
+TitleProton2
+    dc.b %01110010
+    dc.b %01010010
+    dc.b %01010010
+    dc.b %01010010
+    dc.b %01010010
+    dc.b %01010010
+    dc.b %01110111
+TitleProton3
+    dc.b %01010000
+    dc.b %01010000
+    dc.b %01010000
+    dc.b %01010000
+    dc.b %01010000
+    dc.b %01010000
+    dc.b %01110000
+TitleProton4
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+TitleProton5
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000
+    dc.b %00000000

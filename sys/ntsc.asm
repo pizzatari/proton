@@ -45,7 +45,7 @@ TitlePalette
     dc.b $ce
     dc.b $ce
 
-TitleNamePalette
+TitleAuthorPalette
     dc.b $0a
     dc.b $0c
     dc.b $0e

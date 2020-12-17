@@ -16,8 +16,6 @@
 ;       :                           :
 ;       . . . . . . . . . . . . . . .
 ;       :                           :
-;       . . . . . . . . . . . . . . .
-;       :                           :
 ;   Row :___________________________:
 ;    10 |  screen                   | expander: 16px -> 1px 
 ;       :___________________________:
@@ -164,11 +162,11 @@ PlyrScore       ds.b 3          ; BCD in MSB order
 PlyrFire        ds.b 1
 
 ; enemy data
-SprType0        ds.b MAX_ROWS   ; GRP0: encodes gfx and sprite type
-SprType1        ds.b MAX_ROWS   ; GRP1: encodes gfx and sprite type
+SprType0        ds.b MAX_ROWS   ; GRP0: lo byte is gfx and sprite type
+SprType1        ds.b MAX_ROWS   ; GRP1: lo byte is gfx and sprite type
 SprSpeedX0      ds.b MAX_ROWS
 SprPosX0        ds.b MAX_ROWS
-SprLife0        ds.b MAX_ROWS   ; enemy HP: encodes hit points and color
+SprLife0        ds.b MAX_ROWS   ; enemy HP: hit points and color
 SprFire0        ds.b 1          ; row number of attacking enemy
 SprFire1        ds.w 1          ; bitmask: bit position is the attacking row
 
@@ -287,7 +285,14 @@ TitleVertBlank SUBROUTINE
     sta LaserPtr
 .SkipAnim
 
-    jsr SetTitleBattle
+    ldx #0
+    jsr SetTitleGfx
+    lda #<BlankGfx
+    sta SpritePtrs+8
+    sta SpritePtrs+10
+    lda #>BlankGfx
+    sta SpritePtrs+9
+    sta SpritePtrs+11
 
     ldx #P0_OBJ
     lda #19
@@ -449,7 +454,7 @@ TitleKernel SUBROUTINE
     tya                     ; 2 (60)
     sta WSYNC
     tax                     ; 2 (2)
-    lda TitleNamePalette,x  ; 4 (6)
+    lda TitleAuthorPalette,x  ; 4 (6)
     sta COLUPF              ; 3 (9)
     lda TitleProton0,x      ; 4 (13)
     sta PF0                 ; 3 (16)
@@ -500,11 +505,25 @@ TitleKernel SUBROUTINE
 
     SLEEP_LINES 34
 
-    jsr SetTitleCopy
+    ldx #1
+    jsr SetTitleGfx
+    lda #<TitleCopy4
+    sta SpritePtrs+8
+    lda #>TitleCopy4
+    sta SpritePtrs+9
+
     ldy #7-1
     jsr DrawWideSprite56
 
-    jsr SetTitleName
+    ldx #2
+    jsr SetTitleGfx
+    lda #<TitleAuthor4
+    sta SpritePtrs+8
+    lda #<TitleAuthor5
+    sta SpritePtrs+10
+    lda #>TitleAuthor5
+    sta SpritePtrs+11
+
     ldy #5-1
     jsr DrawWideSprite56
 
@@ -1474,84 +1493,55 @@ SpawnInBottom SUBROUTINE
 #endif
     rts
 
-SetTitleBattle SUBROUTINE
-    ; set up graphics for battle title
-    lda #<TitleBattle0
+; -----------------------------------------------------------------------------
+; Desc:     Assigns first 4 pointers. The 5th and 6th pointers may or may not
+;           be blanks.
+; Input:    X register (0=battle title, 1=copyright, 2=author)
+; Param:    
+; Output:
+; Notes:    
+; -----------------------------------------------------------------------------
+SetTitleGfx SUBROUTINE
+    lda TitleGfxLo0,x
     sta SpritePtrs
-    lda #<TitleBattle1
+
+    lda TitleGfxLo1,x
     sta SpritePtrs+2
-    lda #<TitleBattle2
+
+    lda TitleGfxLo2,x
     sta SpritePtrs+4
-    lda #<TitleBattle3
+
+    lda TitleGfxLo3,x
     sta SpritePtrs+6
 
-    lda #>TitleBattle
+    lda #>TitleGfx
     sta SpritePtrs+1
     sta SpritePtrs+3
     sta SpritePtrs+5
     sta SpritePtrs+7
-
-    lda #<BlankGfx
-    sta SpritePtrs+8
-    sta SpritePtrs+10
-    lda #>BlankGfx
-    sta SpritePtrs+9
-    sta SpritePtrs+11
     rts
 
-SetTitleCopy SUBROUTINE
-    lda #<TitleCopy0
-    sta SpritePtrs
-    lda #<TitleCopy1
-    sta SpritePtrs+2
-    lda #<TitleCopy2
-    sta SpritePtrs+4
-    lda #<TitleCopy3
-    sta SpritePtrs+6
-    lda #<TitleCopy4
-    sta SpritePtrs+8
-
-    lda #>TitleCopy
-    sta SpritePtrs+1
-    sta SpritePtrs+3
-    sta SpritePtrs+5
-    sta SpritePtrs+7
-    sta SpritePtrs+9
-
-    lda #<BlankGfx
-    sta SpritePtrs+10
-    lda #>BlankGfx
-    sta SpritePtrs+11
-    rts
-
-SetTitleName SUBROUTINE
-    ; set up graphics for title name
-    lda #<TitleName0
-    sta SpritePtrs
-    lda #<TitleName1
-    sta SpritePtrs+2
-    lda #<TitleName2
-    sta SpritePtrs+4
-    lda #<TitleName3
-    sta SpritePtrs+6
-    lda #<TitleName4
-    sta SpritePtrs+8
-    lda #<TitleName5
-    sta SpritePtrs+10
-
-    lda #>TitleName
-    sta SpritePtrs+1
-    sta SpritePtrs+3
-    sta SpritePtrs+5
-    sta SpritePtrs+7
-    sta SpritePtrs+9
-    sta SpritePtrs+11
-    rts
+TitleGfxLo0
+    dc.b <TitleBattle0, <TitleCopy0, <TitleAuthor0
+TitleGfxLo1
+    dc.b <TitleBattle1, <TitleCopy1, <TitleAuthor1
+TitleGfxLo2
+    dc.b <TitleBattle2, <TitleCopy2, <TitleAuthor2
+TitleGfxLo3
+    dc.b <TitleBattle3, <TitleCopy3, <TitleAuthor3
 
     ; platform depedent data
     include "sys/ntsc.asm"
     include "sys/pal.asm"
+    PAGE_BYTES_REMAINING
 
+    ALIGN $ea
+    PAGE_BOUNDARY_SET
+TitleGfx
+    include "gen/title-battle.sp"
+    include "gen/title-author.sp"
+    include "gen/title-copy.sp"
+    PAGE_BOUNDARY_CHECK "TitleCopy"
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
@@ -1671,8 +1661,8 @@ RowKernel SUBROUTINE                ; 43 (43)
     sta NUSIZ1                      ; 3 (39)
 #endif
 
-    lda SprFire0+9                  ; 3
-    sta ENAM1                       ; 3
+    ;lda SprFire0+9                  ; 3
+    ;sta ENAM1                       ; 3
 
     ldy #PF_ROW_HEIGHT-3            ; 2 (41)
 .Row
@@ -1991,12 +1981,6 @@ HUDKernel SUBROUTINE                ; 24 (24)
     PAGE_BOUNDARY_CHECK "(3) Kernels"
     PAGE_BYTES_REMAINING
 
-; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $d00
-    PAGE_BOUNDARY_SET
-    include "gen/title-copy.sp"
-    PAGE_BOUNDARY_CHECK "TitleCopy"
-
 NusizPattern
     dc.b 3, 1, 6, 3, 4, 2, 0, 3
 
@@ -2179,15 +2163,15 @@ HorizPositionPF SUBROUTINE
     sta RESP0,X     ; 4 (26)
     sta HMP0,X      ; 4 (30)
     rts
-
     PAGE_BOUNDARY_CHECK "(4) Kernels"
+
+; -----------------------------------------------------------------------------
+    ;ORG ORG_ADDR + $d00
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
     ORG ORG_ADDR + $e00
     PAGE_BOUNDARY_SET
-    include "gen/title-battle.sp"
-    include "gen/title-name.sp"
     include "gen/title-planet.pf"
     include "gen/title-proton.pf"
     include "gen/wave-text.sp"
