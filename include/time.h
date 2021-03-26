@@ -66,6 +66,7 @@
         bit $1000                   ; +4 (12)
         nop                         ; +2 (14)
     ENDM
+
     MAC SLEEP_17
         ldy #1                      ; +2
 .Sleep
@@ -81,6 +82,22 @@
 .Sleep
         dey                         ; +2
         bpl .Sleep                  ; +3    4 * 5 - 1 = 19 cycles
+    ENDM
+
+    MAC SLEEP_23
+        ldy #3                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    4 * 5 - 1 = 19 cycles
+        nop                         ; +2
+    ENDM
+
+    MAC SLEEP_24
+        ldy #3                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    4 * 5 - 1 = 19 cycles
+        bit $0                      ; +3
     ENDM
 
     MAC SLEEP_26
@@ -186,6 +203,15 @@
         dey                         ; +2
         bpl .Sleep                  ; +3    9 * 5 - 1 = 44 cycles 
         bit $0                      ; +3
+    ENDM
+
+    MAC SLEEP_50
+        ldy #8                      ; +2
+.Sleep
+        dey                         ; +2
+        bpl .Sleep                  ; +3    9 * 5 - 1 = 44 cycles 
+        nop                         ; +2
+        nop                         ; +2
     ENDM
 
     MAC SLEEP_51
