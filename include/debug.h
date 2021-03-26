@@ -4,11 +4,21 @@
     ENDM
 
     MAC PAGE_BYTES_REMAINING
-        ECHO "Page", *&$f00, "has", ((*|$ff)&$fff - *&$fff)d, "bytes remaining"
+        IFCONST PAGE_CURR_BANK
+            ECHO "Bank", (PAGE_CURR_BANK)d, "Page", *&$f00, "has", ((*|$ff)&$fff - *&$fff)d, "bytes remaining"
+        ELSE
+            ECHO "Page", *&$f00, "has", ((*|$ff)&$fff - *&$fff)d, "bytes remaining"
+        ENDIF
     ENDM
 
-    MAC PAGE_LAST_REMAINING
-        ECHO "Page", *&$f00, "has", ($ffa - *&$fff)d, "bytes remaining"
+    MAC PAGE_BYTES_REMAINING_FROM
+.FromAddr SET {1}
+
+        IFCONST PAGE_CURR_BANK
+            ECHO "Bank", (PAGE_CURR_BANK)d, "Page", *&$f00, "has", ((.FromAddr&$fff) - (*&$fff))d, "bytes remaining"
+        ELSE
+            ECHO "Page", *&$f00, "has", ((.FromAddr&$ff) - (*&$fff))d, "bytes remaining"
+        ENDIF
     ENDM
 
     MAC PAGE_BOUNDARY_SET

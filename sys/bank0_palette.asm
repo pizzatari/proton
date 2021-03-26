@@ -7,25 +7,11 @@
 
 #if VIDEO_MODE == VIDEO_NTSC
 
-; total 262
-LINES_VSYNC         = 3
-LINES_VBLANK        = 37
-LINES_OVERSCAN      = 30
-SCREEN_WIDTH        = 160
-SCREEN_HEIGHT       = 192
-
-COLOR_BLACK         = $00
-COLOR_WHITE         = $0e
-COLOR_DGREEN        = $c0
-COLOR_GREEN         = $c2
-COLOR_LGREEN        = $c6
-COLOR_DGRAY         = $02
-COLOR_GRAY          = $06
-COLOR_LGRAY         = $08
-COLOR_RED           = $42
-COLOR_YELLOW        = $1c
-COLOR_BLUE          = $86
-COLOR_ORANGE        = $3a
+BG_COLOR                    = COLOR_GREEN
+PF_COLOR                    = COLOR_DGREEN
+CHIP_COLOR                  = COLOR_YELLOW
+CARD_COLOR                  = COLOR_WHITE
+CARD_INACTIVE_COLOR         = COLOR_LGRAY
 
 TitlePalette
     dc.b $c0
@@ -114,39 +100,5 @@ HUDPalette
 ;ShipPalette3
 ;    ;      v---- missile color
 ;    dc.b $2e
-
-
-; -----------------------------------------------------------------------------
-; Audio data
-; -----------------------------------------------------------------------------
-LASER_AUDIO_RATE    = %00000001
-LASER_AUDIO_FRAMES  = 9
-
-LaserVol
-    ds.b 0, 6, 8, 6, 8, 6, 8, 6, 0
-LaserCon
-    dc.b $8, $8, $8, $8, $8, $8, $8, $8, $8
-LaserFreq
-    dc.b 0, 1, 0, 1, 0, 1, 0, 1, 0
-
-EngineVolume SUBROUTINE
-.range  SET [MAX_SPEED_Y>>FPOINT_SCALE]+1
-.val    SET 0
-.max    SET 6
-.min    SET 2
-    REPEAT .range
-        dc.b [.val * [.max - .min]] / .range + .min
-.val    SET .val + 1
-    REPEND
-
-EngineFrequency SUBROUTINE
-.range  SET [MAX_SPEED_Y>>FPOINT_SCALE]+1
-.val    SET .range
-.max    SET 31
-.min    SET 7
-    REPEAT .range
-        dc.b [.val * [.max - .min]] / .range + .min
-.val    SET .val - 1
-    REPEND
 
 #endif
