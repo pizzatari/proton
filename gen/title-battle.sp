@@ -19,5 +19,5 @@ TitleBattle3
 	dc.b %10101010
 	dc.b %00101010
 	dc.b %10111011
-TitleBattle4 SET BlankGfx
-TitleBattle5 SET BlankGfx
+TitleBattle4 SET Bank0_BlankGfx
+TitleBattle5 SET Bank0_BlankGfx

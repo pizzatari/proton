@@ -1,14 +1,12 @@
 GFX_BEGIN SET *
 
-#if 1
 ; BlankGfx must be on the first byte of the page
-BlankGfx
+Bank1_BlankGfx
 MaskTop
     ds.b PF_ROW_HEIGHT, 0
 MaskTable
     ds.b PF_ROW_HEIGHT, $ff
     ds.b PF_ROW_HEIGHT, 0
-#endif
 
 SPRITE_HEIGHT = 16
 ShipGfx

@@ -41,10 +41,10 @@
 ;       . . . . . . . . . . . . . . .
 ;
 ; 4 banks (4 KB each):
-;   Bank 0:     title vertical blank & overscan
-;   Bank 1:     sound driver & data
-;   Bank 2:     game vertical blank & overscan
-;   Bank 3:    *game kernel & data
+;   Bank 0:     title & wave kernels
+;   Bank 1:		game kernel
+;   Bank 2:     game logic
+;   Bank 3:     sound data
 ;
 ; Each bank has duplicated sections:
 ;   $*000:      reset handler
@@ -56,12 +56,13 @@
 VIDEO_MODE          SET VIDEO_NTSC 
 NO_ILLEGAL_OPCODES  = 1
 
+	include "atarilib.h"
     include "sys/video.h"
-    include "include/debug.h"
-    include "include/io.h"
-    include "include/macro.h"
-    include "include/time.h"
-    include "include/vcs.h"
+    ;include "include/debug.h"
+    ;nclude "include/io.h"
+    ;include "include/macro.h"
+    ;include "include/time.h"
+    ;include "include/vcs.h"
 
 ; -----------------------------------------------------------------------------
 ; Constants
@@ -93,6 +94,7 @@ COLOR_ENEMY         = COLOR_ORANGE
 
 MODE_TITLE          = 0
 MODE_WAVE           = 1
+MODE_GAME_INIT      = 2
 MODE_GAME           = 2
 
 FPOINT_SCALE        = 1 ; fixed point integer bit format: 1111111.1
@@ -151,7 +153,7 @@ Delay           ds.b 1
 SpritePtrs      ds.w MAX_NUM_PTRS
 Ptr             ds.w 1
 RandLFSR8       ds.b 1
-RandLFSR16      = SpritePtrs
+RandLFSR16		= SpritePtrs
 Temp            = Ptr
 Temp2           = Ptr+1
 MemEnd

@@ -31,5 +31,5 @@ WaveText3
 	dc.b %11110000
 	dc.b %00000000
 	dc.b %00000000
-WaveText4 SET BlankGfx
-WaveText5 SET BlankGfx
+WaveText4 SET Bank0_BlankGfx
+WaveText5 SET Bank0_BlankGfx

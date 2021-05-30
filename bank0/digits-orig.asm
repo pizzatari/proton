@@ -1,112 +1,110 @@
-DIGIT_HEIGHT    = 6
-
-Digits
-Digit0
+Bank0_Digits
+Bank0_Digit0
     dc.b #%00000000
     dc.b #%00001110
     dc.b #%00001010
     dc.b #%00001010
     dc.b #%00001010
     dc.b #%00001110
-Digit1
+Bank0_Digit1
     dc.b #%00000000
     dc.b #%00000100
     dc.b #%00000100
     dc.b #%00000100
     dc.b #%00000100
     dc.b #%00000100
-Digit2
+Bank0_Digit2
     dc.b #%00000000
     dc.b #%00001110
     dc.b #%00001000
     dc.b #%00001110
     dc.b #%00000010
     dc.b #%00001110
-Digit3
+Bank0_Digit3
     dc.b #%00000000
     dc.b #%00001110
     dc.b #%00000010
     dc.b #%00000110
     dc.b #%00000010
     dc.b #%00001110
-Digit4
+Bank0_Digit4
     dc.b #%00000000
     dc.b #%00000010
     dc.b #%00000010
     dc.b #%00001110
     dc.b #%00001010
     dc.b #%00001010
-Digit5
+Bank0_Digit5
     dc.b #%00000000
     dc.b #%00001110
     dc.b #%00000010
     dc.b #%00001110
     dc.b #%00001000
     dc.b #%00001110
-Digit6
+Bank0_Digit6
     dc.b #%00000000
     dc.b #%00001110
     dc.b #%00001010
     dc.b #%00001110
     dc.b #%00001000
     dc.b #%00001110
-Digit7
+Bank0_Digit7
     dc.b #%00000000
     dc.b #%00000010
     dc.b #%00000010
     dc.b #%00000010
     dc.b #%00000010
     dc.b #%00001110
-Digit8
+Bank0_Digit8
     dc.b #%00000000
     dc.b #%00001110
     dc.b #%00001010
     dc.b #%00001110
     dc.b #%00001010
     dc.b #%00001110
-Digit9
+Bank0_Digit9
     dc.b #%00000000
     dc.b #%00000010
     dc.b #%00000010
     dc.b #%00001110
     dc.b #%00001010
     dc.b #%00001110
-Digit10
+Bank0_Digit10
     dc.b #%00000000
     dc.b #%00010010
     dc.b #%00010010
     dc.b #%00011110
     dc.b #%00010010
     dc.b #%00011110
-Digit11
+Bank0_Digit11
     dc.b #%00000000
     dc.b #%00011100
     dc.b #%00010010
     dc.b #%00011110
     dc.b #%00010010
     dc.b #%00011100
-Digit12
+Bank0_Digit12
     dc.b #%00000000
     dc.b #%00011110
     dc.b #%00010000
     dc.b #%00010000
     dc.b #%00010000
     dc.b #%00011110
-Digit13
+Bank0_Digit13
     dc.b #%00000000
     dc.b #%00011100
     dc.b #%00010010
     dc.b #%00010010
     dc.b #%00010010
     dc.b #%00011100
-Digit14
+Bank0_Digit14
     dc.b #%00000000
     dc.b #%00011110
     dc.b #%00010000
     dc.b #%00011000
     dc.b #%00010000
     dc.b #%00011110
-Digit15
+Bank0_Digit15
     dc.b #%00000000
     dc.b #%00010000
     dc.b #%00010000

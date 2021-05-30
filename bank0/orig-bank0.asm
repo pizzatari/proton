@@ -1,258 +1,34 @@
-; -----------------------------------------------------------------------------
-; Game:     Battle for Proton
-; Author:   Edward Gilmour
-; Date:     Jan 21, 2019
-; Version:  0.3 (beta)
-; -----------------------------------------------------------------------------
-; Treadmill kernel: The rows are pushed downward and the terrain is drawn
-; fixed relative to the top of the row. The first and last rows expand and
-; shrink in tandem.
-;
-;       . . . . . . . . . . . . . . .
-;       :  world                    :
-;       . . . . . . . . . . . . . . .
-;       :                           :
-;       . . . . . . . . . . . . . . .
-;       :                           :
-;       . . . . . . . . . . . . . . .
-;       :                           :
-;       . . . . . . . . . . . . . . .
-;       :                           :
-;   Row :___________________________:
-;    10 |  screen                   | expander: 16px -> 1px 
-;       :___________________________:
-;     9 |                           |
-;       |___________________________|
-;     8 |                           | row: 16px
-;       |___________________________|
-;     7 |                           |
-;       |___________________________|
-;     6 |                           |
-;       |___________________________|
-;     5 |                           |
-;       |___________________________|
-;     4 |                           |
-;       |___________________________|
-;     3 |                           |
-;       |___________________________|
-;     2 |                           |
-;       |___________________________|
-;     1 :                           :
-;       : . . . . . . . . . . . . . : shrinker: 31px -> 16px
-;     0 :           /_\             : player
-;       :___________________________:
-;       |      |             |      | HUD
-;       |______|_____________|______|
-;       :                           :
-;       :                           :
-;       : world                     :
-;       . . . . . . . . . . . . . . .
-;
-    processor 6502
-
-    include "include/vcs.h"
-    include "include/macro.h"
-    include "include/video.h"
-    include "include/time.h"
-    include "include/io.h"
-    include "include/debug.h"
-
-; -----------------------------------------------------------------------------
-; Definitions
-; -----------------------------------------------------------------------------
-VIDEO_MODE          = VIDEO_NTSC 
-RAND_GALOIS8        = 1
-RAND_GALOIS16       = 1
-RAND_JUMBLE8        = 1
-
-ORG_ADDR            = $f000
-
-COLOR_BG            = COLOR_DGREEN
-COLOR_FG            = COLOR_GREEN
-COLOR_HUD_SCORE     = COLOR_WHITE
-COLOR_LASER         = COLOR_RED
-COLOR_BUILDING      = COLOR_LGRAY
-COLOR_ENEMY         = COLOR_ORANGE
-
-MODE_TITLE          = 0
-MODE_WAVE           = 1
-MODE_GAME           = 2
-
-FPOINT_SCALE        = 1 ; fixed point integer bit format: 1111111.1
-
-; bounds of the screen
-MIN_POS_X           = 23 + 11
-MAX_POS_X           = SCREEN_WIDTH - 11
-
-; Max/min speed must be less than half the pattern height otherwise an
-; optical illusion occurs giving the impression of reversing direction.
-MAX_SPEED_Y         =  7 << FPOINT_SCALE
-MIN_SPEED_Y         = -7 << FPOINT_SCALE
-MAX_SPEED_X         =  3
-MIN_SPEED_X         = -3
-ACCEL_Y             =  1
-ACCEL_X             =  1
-FRICTION            =  1
-
-MAX_ROWS            = 12
-MAX_NUM_PTRS        = 6
-
-; Objects
-P0_OBJ              = 0
-P1_OBJ              = 1
-M0_OBJ              = 2
-M1_OBJ              = 3
-BL_OBJ              = 4
-
-TYPE_ENEMY          = 0
-TYPE_BUILDING       = 1
-TYPE_ACTION         = 2
-
-LASER_DAMAGE        = 4
-
-TITLE_DELAY         = 38
-JOY_DELAY           = 30
-
-RAND_SEED           = $fb11
-RAND_JUMBLE         = 1
-
-
-PF_ROW_HEIGHT       = 16
-
-; -----------------------------------------------------------------------------
-; Variables
-; -----------------------------------------------------------------------------
-    SEG.U RAM
-    ORG $80
-
-; Global vars
-FrameCtr        ds.b 1
-RowNum          ds.w 1              ; row number associated with the bottom row
-Mode            ds.b 1
-Delay           ds.b 1
-SpritePtrs      ds.w MAX_NUM_PTRS
-Ptr             ds.w 1
-RandLFSR8       ds.b 1
-RandLFSR16      = SpritePtrs
-Temp            = Ptr
-Temp2           = Ptr+1
-MemEnd
-
-    ORG MemEnd
-; Title vars
-LaserPtr        ds.w 1
-LaserPF         ds.c 6
-
-    ORG MemEnd
-; Game vars 
-Status          ds.b 1
-ST_NORM         = 0
-ST_ALERT        = 1
-
-; screen motion
-ScreenPosY      ds.b 1
-ScreenSpeedY    ds.b 1
-
-; player data
-PlyrSpeedX      ds.b 1
-PlyrPosX        ds.b 1
-PlyrLife        ds.b 1          ; [Lives, Shields] 
-PL_LIVES_MASK   = %00111000
-PL_SHIELDS_MASK = %00000111
-PlyrLaser       ds.b 1
-PlyrScore       ds.b 3          ; BCD in MSB order
-PlyrFire        ds.b 1
-
-; enemy data
-SprType0        ds.b MAX_ROWS   ; GRP0: encodes gfx and sprite type
-SprType1        ds.b MAX_ROWS   ; GRP1: encodes gfx and sprite type
-SprSpeedX0      ds.b MAX_ROWS
-SprPosX0        ds.b MAX_ROWS
-SprLife0        ds.b MAX_ROWS   ; enemy HP: encodes hit points and color
-SprFire0        ds.b 1          ; row number of attacking enemy
-SprFire1        ds.w 1          ; bitmask: bit position is the attacking row
-
-; RandLFSR8 bits
-SPR_CONTINUE    = %01110000
-SPR_ATTACK0     = %00000111
-SPR_ATTACK1     = %00001110
-SPR_RETREAT     = %10000000
-
-LaserAudioFrame ds.b 1
-
-CurrRow         ds.b 1
-P0Ptr           ds.w 1
-P1Ptr           ds.w 1
-BotPtr          ds.w 1
-
-LocalVars       ds.b 4
-TempColor       = LocalVars+1
-EndLine         = LocalVars+1
-PlyrIdx         = LocalVars+2
-HUDHeight       = LocalVars+1
-
-    RAM_BYTES_USAGE
-
-; -----------------------------------------------------------------------------
-; Macros
-; -----------------------------------------------------------------------------
-
-; -----------------------------------------------------------------------------
-; Desc:     Calls the named procedure for the mode.
-; Input:    A register (procedure index)
-; Param:    table
-; Output:
-; -----------------------------------------------------------------------------
-    MAC CALL_PROC_TABLE 
-.PROC   SET {1}
-        asl
-        tax
-        lda .PROC,x
-        sta Ptr
-        lda .PROC+1,x
-        sta Ptr+1
-        lda #>[.Return-1]
-        pha
-        lda #<[.Return-1]
-        pha
-        jmp (Ptr)
-.Return
-    ENDM
-
-; -----------------------------------------------------------------------------
-; Rom Begin
-; -----------------------------------------------------------------------------
     SEG rom
-    ORG ORG_ADDR
+    ORG BANK0_ORG
 
-Reset
+Bank0_Reset
     sei
     CLEAN_START
-    jsr TitleInit
+    jsr Bank0_TitleInit
 
-FrameStart SUBROUTINE
+Bank0_FrameStart SUBROUTINE
     inc FrameCtr
-    jsr VerticalSync
+    jsr Bank0_VerticalSync
 
-    lda Mode
-    CALL_PROC_TABLE ModeVertBlank
+    lda #PROC_VERT_BLANK
+    jsr Bank0_CallProcedure
+    
+    lda #PROC_KERNEL
+    jsr Bank0_CallProcedure
+    
+    lda #PROC_OVERSCAN
+    jsr Bank0_CallProcedure
 
-    lda Mode
-    CALL_PROC_TABLE ModeKernel
+    jmp Bank0_FrameStart
 
-    lda Mode
-    CALL_PROC_TABLE ModeOverscan
-
-    jmp FrameStart
-
-VerticalSync SUBROUTINE
+Bank0_VerticalSync SUBROUTINE
     VERTICAL_SYNC
     rts
 
 ; -----------------------------------------------------------------------------
 ; Title code
 ; -----------------------------------------------------------------------------
-TitleInit
+Bank0_TitleInit
     ldx #TITLE_DELAY
     stx Delay
     ldx #$0f
@@ -265,8 +41,8 @@ TitleInit
     stx LaserPF+5
     rts
 
-TitleVertBlank SUBROUTINE
-    lda #LINES_VBLANK*76/64
+Bank0_TitleVertBlank SUBROUTINE
+    lda #VBLANK_HEIGHT*76/64
     sta TIM64T
 
     lda #COLOR_WHITE
@@ -287,25 +63,32 @@ TitleVertBlank SUBROUTINE
     sta LaserPtr
 .SkipAnim
 
-    jsr SetTitleBattle
+    ldx #0
+    jsr Bank0_SetTitleGfx
+    lda #<BlankGfx
+    sta SpritePtrs+8
+    sta SpritePtrs+10
+    lda #>BlankGfx
+    sta SpritePtrs+9
+    sta SpritePtrs+11
 
     ldx #P0_OBJ
     lda #19
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     ldx #P1_OBJ
     lda #19+8
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     sta WSYNC
     sta HMOVE
 
-    jsr TitleAnimate
+    jsr Bank0_TitleAnimate
 
     TIMER_WAIT
     sta VBLANK      ; turn on the display
     sta CTRLPF
     rts
 
-TitleKernel SUBROUTINE
+Bank0_TitleKernel SUBROUTINE
     sta WSYNC               ; WSYNC for timing
     lda #COLOR_BLACK        ; 2 (2)
     sta COLUBK              ; 3 (5)
@@ -359,7 +142,7 @@ TitleKernel SUBROUTINE
     bpl .TitleLoop          ; 2 (57)
 
     ldy #4-1                ; 2 (59)
-    jsr DrawTitleSprite     ; 6 (65)    returns on cycle 18
+    jsr Bank0_DrawTitleSprite     ; 6 (65)    returns on cycle 18
 
     ; ------------------------------------------------------------------------
     ; 1 (19) line blank spacer
@@ -370,7 +153,7 @@ TitleKernel SUBROUTINE
 
     ldx #P0_OBJ             ; 2 (29)
     lda #164                ; 2 (31)
-    jsr HorizPositionBG     ; 6 (37)
+    jsr Bank0_HorizPositionBG     ; 6 (37)
 
     lda #0                  ; 2 (20)
     sta NUSIZ0              ; 3 (23)
@@ -449,7 +232,7 @@ TitleKernel SUBROUTINE
     tya                     ; 2 (60)
     sta WSYNC
     tax                     ; 2 (2)
-    lda TitleNamePalette,x  ; 4 (6)
+    lda TitleAuthorPalette,x  ; 4 (6)
     sta COLUPF              ; 3 (9)
     lda TitleProton0,x      ; 4 (13)
     sta PF0                 ; 3 (16)
@@ -481,10 +264,10 @@ TitleKernel SUBROUTINE
     ; ------------------------------------------------------------------------
     ldx #P0_OBJ
     lda #71
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     ldx #P1_OBJ
     lda #71+8
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     sta WSYNC
     sta HMOVE
 
@@ -500,13 +283,27 @@ TitleKernel SUBROUTINE
 
     SLEEP_LINES 34
 
-    jsr SetTitleCopy
-    ldy #7-1
-    jsr DrawWideSprite56
+    ldx #1
+    jsr Bank0_SetTitleGfx
+    lda #<TitleCopy4
+    sta SpritePtrs+8
+    lda #>TitleCopy4
+    sta SpritePtrs+9
 
-    jsr SetTitleName
+    ldy #7-1
+    jsr Bank0_DrawWideSprite56
+
+    ldx #2
+    jsr Bank0_SetTitleGfx
+    lda #<TitleAuthor4
+    sta SpritePtrs+8
+    lda #<TitleAuthor5
+    sta SpritePtrs+10
+    lda #>TitleAuthor5
+    sta SpritePtrs+11
+
     ldy #5-1
-    jsr DrawWideSprite56
+    jsr Bank0_DrawWideSprite56
 
     lda #0
     sta VDELP0
@@ -519,12 +316,12 @@ TitleKernel SUBROUTINE
     SLEEP_LINES 2
     rts
 
-TitleOverscan SUBROUTINE
+Bank0_TitleOverscan SUBROUTINE
     sta WSYNC
     lda #2
     sta VBLANK
 
-    lda #[LINES_OVERSCAN-1]*76/64
+    lda #[OVERSCAN_HEIGHT-1]*76/64
     sta TIM64T
 
     lda #COLOR_BLACK
@@ -532,15 +329,15 @@ TitleOverscan SUBROUTINE
     sta COLUPF
 
     ldx #MODE_WAVE
-    jsr GeneralIO
+    jsr Bank0_GeneralIO
     TIMER_WAIT
     rts
 
-TitleAnimate SUBROUTINE
+Bank0_TitleAnimate SUBROUTINE
     lda FrameCtr
     cmp #255
     bne .Anim
-    jsr TitleInit
+    jsr Bank0_TitleInit
     rts
 
 .Anim
@@ -571,18 +368,18 @@ TitleAnimate SUBROUTINE
 ; -----------------------------------------------------------------------------
 ; Wave code
 ; -----------------------------------------------------------------------------
-WaveInit SUBROUTINE
+Bank0_WaveInit SUBROUTINE
     lda #JOY_DELAY
     sta Delay
-    jsr SpritePtrsClear
+    jsr Bank0_SpritePtrsClear
     lda #0
     sta GRP0
     sta GRP1
     sta GRP0
     rts
 
-WaveVertBlank SUBROUTINE
-    lda #LINES_VBLANK*76/64
+Bank0_WaveVertBlank SUBROUTINE
+    lda #VBLANK_HEIGHT*76/64
     sta TIM64T
 
     lda #COLOR_BLACK
@@ -619,10 +416,10 @@ WaveVertBlank SUBROUTINE
 
     lda StatusPos0
     ldx #P0_OBJ
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     lda StatusPos1
     ldx #P1_OBJ
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     sta WSYNC
     sta HMOVE
 
@@ -637,7 +434,7 @@ WaveVertBlank SUBROUTINE
     sta CTRLPF
     rts
 
-WaveKernel SUBROUTINE
+Bank0_WaveKernel SUBROUTINE
     ldy #96+1
 .Top
     sty WSYNC
@@ -645,7 +442,7 @@ WaveKernel SUBROUTINE
     bne .Top
 
     ldy #DIGIT_HEIGHT-1
-    jsr DrawWideSprite56
+    jsr Bank0_DrawWideSprite56
 
     ldy #96-DIGIT_HEIGHT
 .Bot
@@ -655,12 +452,12 @@ WaveKernel SUBROUTINE
 
     rts
 
-WaveOverscan SUBROUTINE
+Bank0_WaveOverscan SUBROUTINE
     sta WSYNC
     lda #2
     sta VBLANK
 
-    lda #[LINES_OVERSCAN-1]*76/64
+    lda #[OVERSCAN_HEIGHT-1]*76/64
     sta TIM64T
 
     lda #0
@@ -675,7 +472,7 @@ WaveOverscan SUBROUTINE
     bne .Delay
 .SkipDec
     ldx #MODE_GAME
-    jsr GeneralIO
+    jsr Bank0_GeneralIO
 .Delay
 
     TIMER_WAIT
@@ -684,11 +481,11 @@ WaveOverscan SUBROUTINE
 ; -----------------------------------------------------------------------------
 ; Game code
 ; -----------------------------------------------------------------------------
-GameInit SUBROUTINE
-    jsr InitScreen
-    jsr InitPlayer
-    jsr SpritePtrsClear
-    jsr SpawnGroundSprites
+Bank0_GameInit SUBROUTINE
+    jsr Bank0_InitScreen
+    jsr Bank0_InitPlayer
+    jsr Bank0_SpritePtrsClear
+    jsr Bank0_SpawnGroundSprites
 
     lda #>RAND_SEED
     eor INTIM
@@ -700,8 +497,8 @@ GameInit SUBROUTINE
     sta Delay
     rts
 
-GameVertBlank SUBROUTINE
-    lda #LINES_VBLANK*76/64
+Bank0_GameVertBlank SUBROUTINE
+    lda #VBLANK_HEIGHT*76/64
     sta TIM64T
 
     lda #0
@@ -721,8 +518,8 @@ GameVertBlank SUBROUTINE
     lda #COLOR_FG
     sta COLUPF
 
-    jsr ScreenScroll
-    jsr EnemyTurn
+    jsr Bank0_ScreenScroll
+    jsr Bank0_EnemyTurn
 
     lda #ST_ALERT
     sta Status
@@ -746,26 +543,26 @@ GameVertBlank SUBROUTINE
     ; positon sprites
     ldx #P0_OBJ
     lda SprPosX0+MAX_ROWS-1
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     ldx #P1_OBJ
     lda #76
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     ldx #M0_OBJ
     lda PlyrPosX
     clc
     adc #4          ; adjust offset
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
     sta WSYNC
     sta HMOVE
 
     ; enable/disable laser
-    lda Delay
-    bne .Continue
+;    lda Delay
+;    bne .Continue
     lda PlyrFire
     sta ENAM0
     beq .Continue
     stx LaserAudioFrame
-    jsr DetectPlayerHit
+    jsr Bank0_DetectPlayerHit
 .Continue
 
     lda #>BlankGfx
@@ -806,9 +603,9 @@ GameVertBlank SUBROUTINE
 
     rts
 
-GameOverscan SUBROUTINE
+Bank0_GameOverscan SUBROUTINE
     ; -2 because ShrinkerRowKernel consumes an extra line
-    lda #[LINES_OVERSCAN-2]*76/64
+    lda #[OVERSCAN_HEIGHT-2]*76/64
     sta TIM64T
 
     ; turn off display
@@ -826,25 +623,25 @@ GameOverscan SUBROUTINE
 .SkipDec
     bne .Delay
 
-    jsr GameIO
-    jsr ShipUpdatePosition
-    jsr EnemiesUpdatePosition
-    jsr PlayAudio
+    jsr Bank0_GameIO
+    jsr Bank0_ShipUpdatePosition
+    jsr Bank0_EnemiesUpdatePosition
+    jsr Bank0_PlayAudio
 
 .Delay
     TIMER_WAIT
     rts
 
-GameIO SUBROUTINE
+Bank0_GameIO SUBROUTINE
     lda SWCHB
     and #SWITCH_RESET
     bne .Joystick
-    jmp Reset
+    jmp Bank0_Reset
 
 .Joystick
-    lda Delay
-    beq .Continue
-    rts
+;    lda Delay
+;    beq .Continue
+;    rts
 
 .Continue
     ; update every even frame
@@ -952,7 +749,7 @@ GameIO SUBROUTINE
 
 .CheckFire
     lda INPT4
-    eor $ff
+    eor #$ff
     and #JOY_FIRE
     clc
     rol
@@ -963,7 +760,7 @@ GameIO SUBROUTINE
 .Return
     rts
 
-InitScreen SUBROUTINE
+Bank0_InitScreen SUBROUTINE
     ; init screen
     lda #8
     sta ScreenPosY
@@ -971,7 +768,7 @@ InitScreen SUBROUTINE
     sta ScreenSpeedY
     rts
 
-InitPlayer SUBROUTINE
+Bank0_InitPlayer SUBROUTINE
     ; init player's sprite
     lda #[SCREEN_WIDTH/2 - 4]
     sta PlyrPosX
@@ -986,21 +783,21 @@ InitPlayer SUBROUTINE
     sta PlyrLaser
     rts
 
-SpawnGroundSprites SUBROUTINE
+Bank0_SpawnGroundSprites SUBROUTINE
     ; populate sprites with some values
     ldy #MAX_ROWS-1
     sty Temp
 .Loop
-    jsr SpritesShiftDown
-    jsr RowInc
-    jsr SpawnInTop
+    jsr Bank0_SpritesShiftDown
+    jsr Bank0_RowInc
+    jsr Bank0_SpawnInTop
     dec Temp
     bne .Loop
 
 .Return
     rts
 
-SpawnEnemies SUBROUTINE
+Bank0_SpawnEnemies SUBROUTINE
     lda #0
     ldy #MAX_ROWS-1
 .Loop
@@ -1040,7 +837,7 @@ SpawnEnemies SUBROUTINE
 .Return
     rts
 
-HUDSetup SUBROUTINE
+Bank0_HUDSetup SUBROUTINE
     lda #>Digits
     sta SpritePtrs+1
     sta SpritePtrs+3
@@ -1132,7 +929,7 @@ HUDSetup SUBROUTINE
     sta SpritePtrs+10
     rts
 
-EnemyTurn SUBROUTINE
+Bank0_EnemyTurn SUBROUTINE
     ; foreach enemy, decide an action
     ;   hover, move, change direction, attack player, attack ground, retreat
     lda RandLFSR8
@@ -1159,7 +956,7 @@ EnemyTurn SUBROUTINE
     lda SprPosX0,y
     clc
     adc #4
-    jsr HorizPosition
+    jsr Bank0_HorizPosition
 
 .Attack0
     
@@ -1173,13 +970,13 @@ EnemyTurn SUBROUTINE
 .Return
     rts
 
-DetectCollision SUBROUTINE
+Bank0_DetectCollision SUBROUTINE
     lda SprType0
     beq .Return
 .Return
     rts
 
-DetectPlayerHit SUBROUTINE
+Bank0_DetectPlayerHit SUBROUTINE
     lda #0
     sta Temp
     
@@ -1241,7 +1038,7 @@ DetectPlayerHit SUBROUTINE
     cld
     rts
 
-SpritePtrsClear SUBROUTINE
+Bank0_SpritePtrsClear SUBROUTINE
     lda #<BlankGfx
     sta SpritePtrs
     sta SpritePtrs+2
@@ -1258,7 +1055,7 @@ SpritePtrsClear SUBROUTINE
     sta SpritePtrs+11
     rts
 
-ShipUpdatePosition SUBROUTINE
+Bank0_ShipUpdatePosition SUBROUTINE
     ; update player's vertical position
     lda ScreenPosY
     clc
@@ -1282,7 +1079,7 @@ ShipUpdatePosition SUBROUTINE
 .Return
     rts
 
-EnemiesUpdatePosition SUBROUTINE
+Bank0_EnemiesUpdatePosition SUBROUTINE
     ldy #MAX_ROWS-1
 .Enemies
     lda SprType0,y
@@ -1311,10 +1108,10 @@ EnemiesUpdatePosition SUBROUTINE
 
     rts
 
-UpdateVerticalPositions SUBROUTINE
+Bank0_UpdateVerticalPositions SUBROUTINE
     rts
 
-ScreenScroll SUBROUTINE
+Bank0_ScreenScroll SUBROUTINE
     ; if motionless, do nothing
     ; if traveling forward when Y = 0, then spawn a new top row
     ; if traveling backward when Y = 15, then spawn a new bottom row
@@ -1329,9 +1126,9 @@ ScreenScroll SUBROUTINE
     sec
     sbc #PF_ROW_HEIGHT
     sta ScreenPosY
-    jsr SpritesShiftDown
-    jsr RowInc
-    jsr SpawnInTop
+    jsr Bank0_SpritesShiftDown
+    jsr Bank0_RowInc
+    jsr Bank0_SpawnInTop
     jmp .Return
 
 .Reverse
@@ -1340,14 +1137,14 @@ ScreenScroll SUBROUTINE
     clc
     adc #PF_ROW_HEIGHT
     sta ScreenPosY
-    jsr SpritesShiftUp
-    jsr RowDec
-    jsr SpawnInBottom
+    jsr Bank0_SpritesShiftUp
+    jsr Bank0_RowDec
+    jsr Bank0_SpawnInBottom
 
 .Return
     rts
 
-SpritesShiftDown SUBROUTINE
+Bank0_SpritesShiftDown SUBROUTINE
     ; shift rows down
     ldy #0
 .ShiftDown
@@ -1371,7 +1168,7 @@ SpritesShiftDown SUBROUTINE
 
     rts
 
-SpritesShiftUp SUBROUTINE
+Bank0_SpritesShiftUp SUBROUTINE
     ; shift rows up
     ldy #MAX_ROWS-1
 .ShiftUp
@@ -1394,7 +1191,7 @@ SpritesShiftUp SUBROUTINE
 
     rts
 
-RowInc SUBROUTINE
+Bank0_RowInc SUBROUTINE
     clc
     lda RowNum
     adc #1
@@ -1404,7 +1201,7 @@ RowInc SUBROUTINE
     sta RowNum+1
     rts
 
-RowDec SUBROUTINE
+Bank0_RowDec SUBROUTINE
     sec
     lda RowNum
     sbc #1
@@ -1414,7 +1211,7 @@ RowDec SUBROUTINE
     sta RowNum+1
     rts
 
-SpawnInTop SUBROUTINE
+Bank0_SpawnInTop SUBROUTINE
     ; spawn ground structure
     lda RowNum
     clc
@@ -1443,7 +1240,7 @@ SpawnInTop SUBROUTINE
 .Skip
     rts
 
-SpawnInBottom SUBROUTINE
+Bank0_SpawnInBottom SUBROUTINE
     ; spawn ground structure
     lda RowNum
     jsr Jumble8
@@ -1474,140 +1271,111 @@ SpawnInBottom SUBROUTINE
 #endif
     rts
 
-SetTitleBattle SUBROUTINE
-    ; set up graphics for battle title
-    lda #<TitleBattle0
+; -----------------------------------------------------------------------------
+; Desc:     Assigns first 4 pointers. The 5th and 6th pointers may or may not
+;           be blanks.
+; Input:    X register (0=battle title, 1=copyright, 2=author)
+; Param:    
+; Output:
+; Notes:    
+; -----------------------------------------------------------------------------
+Bank0_SetTitleGfx SUBROUTINE
+    lda TitleGfxLo0,x
     sta SpritePtrs
-    lda #<TitleBattle1
+
+    lda TitleGfxLo1,x
     sta SpritePtrs+2
-    lda #<TitleBattle2
+
+    lda TitleGfxLo2,x
     sta SpritePtrs+4
-    lda #<TitleBattle3
+
+    lda TitleGfxLo3,x
     sta SpritePtrs+6
 
-    lda #>TitleBattle
+    lda #>TitleGfx
     sta SpritePtrs+1
     sta SpritePtrs+3
     sta SpritePtrs+5
     sta SpritePtrs+7
-
-    lda #<BlankGfx
-    sta SpritePtrs+8
-    sta SpritePtrs+10
-    lda #>BlankGfx
-    sta SpritePtrs+9
-    sta SpritePtrs+11
     rts
 
-SetTitleCopy SUBROUTINE
-    lda #<TitleCopy0
-    sta SpritePtrs
-    lda #<TitleCopy1
-    sta SpritePtrs+2
-    lda #<TitleCopy2
-    sta SpritePtrs+4
-    lda #<TitleCopy3
-    sta SpritePtrs+6
-    lda #<TitleCopy4
-    sta SpritePtrs+8
-
-    lda #>TitleCopy
-    sta SpritePtrs+1
-    sta SpritePtrs+3
-    sta SpritePtrs+5
-    sta SpritePtrs+7
-    sta SpritePtrs+9
-
-    lda #<BlankGfx
-    sta SpritePtrs+10
-    lda #>BlankGfx
-    sta SpritePtrs+11
-    rts
-
-SetTitleName SUBROUTINE
-    ; set up graphics for title name
-    lda #<TitleName0
-    sta SpritePtrs
-    lda #<TitleName1
-    sta SpritePtrs+2
-    lda #<TitleName2
-    sta SpritePtrs+4
-    lda #<TitleName3
-    sta SpritePtrs+6
-    lda #<TitleName4
-    sta SpritePtrs+8
-    lda #<TitleName5
-    sta SpritePtrs+10
-
-    lda #>TitleName
-    sta SpritePtrs+1
-    sta SpritePtrs+3
-    sta SpritePtrs+5
-    sta SpritePtrs+7
-    sta SpritePtrs+9
-    sta SpritePtrs+11
-    rts
+TitleGfxLo0
+    dc.b <TitleBattle0, <TitleCopy0, <TitleAuthor0
+TitleGfxLo1
+    dc.b <TitleBattle1, <TitleCopy1, <TitleAuthor1
+TitleGfxLo2
+    dc.b <TitleBattle2, <TitleCopy2, <TitleAuthor2
+TitleGfxLo3
+    dc.b <TitleBattle3, <TitleCopy3, <TitleAuthor3
 
     ; platform depedent data
-    include "sys/ntsc.asm"
-    include "sys/pal.asm"
+    include "sys/bank0_palette.asm"
+    include "sys/bank0_audio.asm"
+    PAGE_BYTES_REMAINING
 
+    ALIGN 256, $ea
+    PAGE_BOUNDARY_SET
+TitleGfx
+    include "gen/title-battle.sp"
+    include "gen/title-author.sp"
+    include "gen/title-copy.sp"
+    PAGE_BOUNDARY_CHECK "TitleCopy"
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $a00
+    ORG BANK0_ORG + $a00
     PAGE_BOUNDARY_SET
 
-GameKernel SUBROUTINE
+Bank0_GameKernel SUBROUTINE
     ; executes between 1 and 16 lines
     ;ldy #11
-    jsr ExpanderRowKernel
+    jsr Bank0_ExpanderRowKernel
                             ; 30 (30)
     dec CurrRow             ; 5 (35)
     ldy #10                 ; 2 (37) 
-    jsr RowKernel           ; 6 (43)
+    jsr Bank0_RowKernel           ; 6 (43)
                             ; 30 (30)
     dec CurrRow             ; 5 (35)
     ldy #9                  ; 2 (37)
-    jsr RowKernel           ; 6 (43)
+    jsr Bank0_RowKernel           ; 6 (43)
 
     dec CurrRow
     ldy #8
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #7
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #6
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #5
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #4
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #3
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #2
-    jsr RowKernel
+    jsr Bank0_RowKernel
 
     dec CurrRow
     ldy #1
-    jsr ShrinkerRowKernel
+    jsr Bank0_ShrinkerRowKernel
 
-    jsr HUDSetup
-    jsr HUDKernel
+    jsr Bank0_HUDSetup
+    jsr Bank0_HUDKernel
     rts
 
-ExpanderRowKernel SUBROUTINE
+Bank0_ExpanderRowKernel SUBROUTINE
     lda SprLife0,y                  ; 4 (4)
     sta TempColor                   ; 3 (7)
 
@@ -1641,13 +1409,13 @@ ExpanderRowKernel SUBROUTINE
     bpl .Row                        ; 2 (24)
     rts                             ; 6 (30)
 
-RowKernel SUBROUTINE                ; 43 (43)
+Bank0_RowKernel SUBROUTINE                ; 43 (43)
     lda SprLife0,y                  ; 4 (47)
     sta TempColor                   ; 3 (50)
 
     ldx #0                          ; 2 (52)
     lda SprPosX0,y                  ; 4 (56)
-    jsr HorizPosition               ; 6 (62)
+    jsr Bank0_HorizPosition               ; 6 (62)
 
     ; invoke fine horizontal positioning
     sta WSYNC
@@ -1671,8 +1439,8 @@ RowKernel SUBROUTINE                ; 43 (43)
     sta NUSIZ1                      ; 3 (39)
 #endif
 
-    lda SprFire0+9                  ; 3
-    sta ENAM1                       ; 3
+    ;lda SprFire0+9                  ; 3
+    ;sta ENAM1                       ; 3
 
     ldy #PF_ROW_HEIGHT-3            ; 2 (41)
 .Row
@@ -1701,29 +1469,30 @@ RowKernel SUBROUTINE                ; 43 (43)
 ; Input:    X register (next mode)
 ; Output:
 ; -----------------------------------------------------------------------------
-GeneralIO SUBROUTINE
+Bank0_GeneralIO SUBROUTINE
     lda SWCHB
     and #SWITCH_RESET
     bne .Joystick
-    jmp Reset
+    jmp Bank0_Reset
 
 .Joystick
     lda #JOY_FIRE
     bit INPT4
     bne .Return
+    
     stx Mode
-    txa
-    CALL_PROC_TABLE ModeInit
+    lda #PROC_INIT
+    jsr Bank0_CallProcedure
 .Return
     rts
 
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $b00
+    ORG BANK0_ORG + $b00
     PAGE_BOUNDARY_SET
 
-ShrinkerRowKernel SUBROUTINE        ; 43 (43)
+Bank0_ShrinkerRowKernel SUBROUTINE        ; 43 (43)
     ; calculate ending line
     lda ScreenPosY                  ; 3 (46)
     and #PF_ROW_HEIGHT-1            ; 2 (48)
@@ -1735,7 +1504,7 @@ ShrinkerRowKernel SUBROUTINE        ; 43 (43)
     ; position player
     ldx #P0_OBJ                     ; 2 (59)
     lda PlyrPosX                    ; 4 (63)
-    jsr HorizPosition               ; 6 (69)
+    jsr Bank0_HorizPosition               ; 6 (69)
 
     ; invoke fine horizontal positioning
     sta WSYNC
@@ -1839,7 +1608,7 @@ ShrinkerRowKernel SUBROUTINE        ; 43 (43)
     rts                             ; 6 (27)
     PAGE_BOUNDARY_CHECK "(2) Kernels"
 
-PlayAudio SUBROUTINE
+Bank0_PlayAudio SUBROUTINE
     ; play laser sounds
     lda PlyrFire
     bne .LaserSound
@@ -1889,29 +1658,52 @@ PlayAudio SUBROUTINE
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $c0f
+    ORG BANK0_ORG + $c0f
 
-; Procedure tables
-ModeInit
-    dc.w TitleInit          ; MODE_TITLE
-    dc.w WaveInit           ; MODE_WAVE
-    dc.w GameInit           ; MODE_GAME
-ModeVertBlank
-    dc.w TitleVertBlank     ; MODE_TITLE
-    dc.w WaveVertBlank      ; MODE_WAVE
-    dc.w GameVertBlank      ; MODE_GAME
-ModeKernel
-    dc.w TitleKernel        ; MODE_TITLE
-    dc.w WaveKernel         ; MODE_WAVE
-    dc.w GameKernel         ; MODE_GAME
-ModeOverscan
-    dc.w TitleOverscan      ; MODE_TITLE
-    dc.w WaveOverscan       ; MODE_WAVE
-    dc.w GameOverscan       ; MODE_GAME
+; Procedure table indexes
+PROC_INIT                   = %00
+PROC_VERT_BLANK             = %01
+PROC_KERNEL                 = %10
+PROC_OVERSCAN               = %11
 
+; Procedure table:
+; Bit 2-3:  mode
+; Bit 0-1:  procedure
+ProceduresLo
+    ; 0000
+    dc.b <Bank0_TitleInit      ; MODE_TITLE
+    dc.b <Bank0_TitleVertBlank ; MODE_TITLE
+    dc.b <Bank0_TitleKernel    ; MODE_TITLE
+    dc.b <Bank0_TitleOverscan  ; MODE_TITLE
+    ; 0100
+    dc.b <Bank0_WaveInit       ; MODE_WAVE
+    dc.b <Bank0_WaveVertBlank  ; MODE_WAVE
+    dc.b <Bank0_WaveKernel     ; MODE_WAVE
+    dc.b <Bank0_WaveOverscan   ; MODE_WAVE
+    ; 1000
+    dc.b <Bank0_GameInit       ; MODE_GAME
+    dc.b <Bank0_GameVertBlank  ; MODE_GAME
+    dc.b <Bank0_GameKernel     ; MODE_GAME
+    dc.b <Bank0_GameOverscan   ; MODE_GAME
+ProceduresHi
+    ; 0000
+    dc.b >Bank0_TitleInit      ; MODE_TITLE
+    dc.b >Bank0_TitleVertBlank ; MODE_TITLE
+    dc.b >Bank0_TitleKernel    ; MODE_TITLE
+    dc.b >Bank0_TitleOverscan  ; MODE_TITLE
+    ; 0100
+    dc.b >Bank0_WaveInit       ; MODE_WAVE
+    dc.b >Bank0_WaveVertBlank  ; MODE_WAVE
+    dc.b >Bank0_WaveKernel     ; MODE_WAVE
+    dc.b >Bank0_WaveOverscan   ; MODE_WAVE
+    ; 1000
+    dc.b >Bank0_GameInit       ; MODE_GAME
+    dc.b >Bank0_GameVertBlank  ; MODE_GAME
+    dc.b >Bank0_GameKernel     ; MODE_GAME
+    dc.b >Bank0_GameOverscan   ; MODE_GAME
 
     PAGE_BOUNDARY_SET
-HUDKernel SUBROUTINE                ; 24 (24)
+Bank0_HUDKernel SUBROUTINE             ; 24 (24)
     lda #$ff                        ; 2 (26)
     ldx #0                          ; 2 (28)
     ldy #1                          ; 2 (30)
@@ -1934,13 +1726,13 @@ HUDKernel SUBROUTINE                ; 24 (24)
     ldy Status                      ; 3
     lda StatusPos0,y                ; 4
     ldy HUDPalette                  ; 3 (35)
-    jsr HorizPositionBG             ; 6 (41)
+    jsr Bank0_HorizPositionBG             ; 6 (41)
 
     ldy Status                      ; 3
     lda StatusPos1,y                ; 4
     ldx #1                          ; 2 (4)
     ldy HUDPalette+1                ; 3 (7)
-    jsr HorizPositionBG             ; 6 (13)
+    jsr Bank0_HorizPositionBG             ; 6 (13)
 
     sta WSYNC
     sta HMOVE                       ; 3 (3)
@@ -1968,7 +1760,7 @@ HUDKernel SUBROUTINE                ; 24 (24)
     sta NUSIZ1                      ; 3 (47)
 
     ldy #DIGIT_HEIGHT-1             ; 2 (49)
-    jsr DrawWideSprite56            ; 6 (55)
+    jsr Bank0_DrawWideSprite56         ; 6 (55)
 
     sta WSYNC
     lda HUDPalette+1                ; 3 (3)
@@ -1990,12 +1782,6 @@ HUDKernel SUBROUTINE                ; 24 (24)
 
     PAGE_BOUNDARY_CHECK "(3) Kernels"
     PAGE_BYTES_REMAINING
-
-; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $d00
-    PAGE_BOUNDARY_SET
-    include "gen/title-copy.sp"
-    PAGE_BOUNDARY_CHECK "TitleCopy"
 
 NusizPattern
     dc.b 3, 1, 6, 3, 4, 2, 0, 3
@@ -2019,7 +1805,7 @@ DigitTable
 ; Notes:    Position GRP0 to TIA cycle 124 (on-screen pixel 56)
 ;           Position GRP1 to TIA cycle 132 (on-screen pixel 64)
 ; -----------------------------------------------------------------------------
-DrawWideSprite56 SUBROUTINE ; 6 (6)
+Bank0_DrawWideSprite56 SUBROUTINE ; 6 (6)
     sty Temp                ; 3 (9)
 .Loop
     ;                            CPU   TIA   GRP0  GRP0A    GRP1  GRP1A
@@ -2049,7 +1835,7 @@ DrawWideSprite56 SUBROUTINE ; 6 (6)
     rts                     ; 6 (67)
 
 ; positioned on TIA cycle 72 and 80 (on-screen pixel 4 and 12)
-DrawTitleSprite SUBROUTINE
+Bank0_DrawTitleSprite SUBROUTINE
     sta WSYNC
     ldx #$ff                ; 2 (2)
     stx PF1                 ; 3 (5)
@@ -2115,7 +1901,7 @@ DrawTitleSprite SUBROUTINE
 ;               sta WSYNC
 ;               sta HMOVE
 ; -----------------------------------------------------------------------------
-HorizPosition SUBROUTINE
+Bank0_HorizPosition SUBROUTINE
     sec             ; 2 (2)
     sta WSYNC       ; 3 (5) 
 
@@ -2137,7 +1923,7 @@ HorizPosition SUBROUTINE
     rts
 
 ; performs horizontal positioning while drawing a background color
-HorizPositionBG SUBROUTINE  ; 6 (6)
+Bank0_HorizPositionBG SUBROUTINE  ; 6 (6)
     sec             ; 2 (8)
     sta WSYNC
     sty COLUBK      ; 3 (3)
@@ -2159,7 +1945,7 @@ HorizPositionBG SUBROUTINE  ; 6 (6)
 
 ; performs horizontal positioning while drawing a playfield pattern
 ; this must enter on or before cycle 62
-HorizPositionPF SUBROUTINE
+Bank0_HorizPositionPF SUBROUTINE
     sty PF0         ; 3 (65)
     sec             ; 2 (67)
     sty PF1         ; 3 (70)
@@ -2179,15 +1965,41 @@ HorizPositionPF SUBROUTINE
     sta RESP0,X     ; 4 (26)
     sta HMP0,X      ; 4 (30)
     rts
-
     PAGE_BOUNDARY_CHECK "(4) Kernels"
+
+; -----------------------------------------------------------------------------
+; Desc:     Calls the named procedure for the game mode.
+; Input:    A register (procedure index)
+;			Mode
+; Param:
+; Output:
+; -----------------------------------------------------------------------------
+Bank0_CallProcedure SUBROUTINE
+    clc
+    ror
+    ror
+    ora Mode
+    rol
+    rol
+    tay
+    lda ProceduresLo,y
+    sta Ptr
+    lda ProceduresHi,y
+    sta Ptr+1
+
+    lda #>[.Return-1]
+    pha
+    lda #<[.Return-1]
+    pha
+    jmp (Ptr)
+.Return
+    rts
+    
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $e00
+    ORG BANK0_ORG + $e00
     PAGE_BOUNDARY_SET
-    include "gen/title-battle.sp"
-    include "gen/title-name.sp"
     include "gen/title-planet.pf"
     include "gen/title-proton.pf"
     include "gen/wave-text.sp"
@@ -2197,7 +2009,7 @@ HorizPositionPF SUBROUTINE
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $f00
+    ORG BANK0_ORG + $f00 
     include "gfx/sprites.asm"
     include "gfx/title.asm"
 
@@ -2226,13 +2038,13 @@ Mult7
     ;dc.b 140, 147, 154, 161, 168, 175, 182, 189, 196, 203
     ;dc.b 210, 217, 224, 231, 238, 245, 252
 
-    PAGE_LAST_REMAINING
+    PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
 ; Interrupts
 ; -----------------------------------------------------------------------------
-    ORG ORG_ADDR + $ffa
+    ORG BANK0_ORG + $ffa
 Interrupts
-    dc.w Reset              ; NMI
-    dc.w Reset              ; RESET
-    dc.w Reset              ; IRQ
+    dc.w Bank0_Reset           ; NMI
+    dc.w Bank0_Reset           ; RESET
+    dc.w Bank0_Reset           ; IRQ

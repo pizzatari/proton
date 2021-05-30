@@ -39,4 +39,4 @@ TitleCopy4
 	dc.b %11000111
 	dc.b %00000000
 	dc.b %00000000
-TitleCopy5 SET BlankGfx
+TitleCopy5 SET Bank0_BlankGfx

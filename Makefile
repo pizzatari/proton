@@ -5,12 +5,23 @@ FIND		= find
 MAKE_SPRITE = ./bin/make-sprite
 MAKE_PFIELD = ./bin/make-playfield
 
-ASM_FLAGS   = -v0 -f3 -l"$*.lst" -s"$*.sym" 
+#ASM_FLAGS   = -v0 -f3 -l"$*.lst" -s"$*.sym" 
+#
+#DEPS_ASM	= $(wildcard ./lib/*.asm) $(wildcard ./gfx/*.asm) \
+#			$(wildcard bank?/*.asm) $(wildcard bank?/gfx/*.asm) \
+#			$(wildcard ./sys/*.asm)
+#DEPS_H		= $(wildcard ./include/*.h) $(wildcard ./sys/*.h)
+INC_DIR     = ../atarilib/include
+LIB_DIR     = ../atarilib/lib
 
-DEPS_ASM	= $(wildcard ./lib/*.asm) $(wildcard ./gfx/*.asm) \
+ASM_FLAGS   = -v0 -f3 -l"$*.lst" -s"$*.sym" -I$(INC_DIR) -I$(LIB_DIR)
+
+DEPS_ASM	= $(wildcard $(LIB_DIR)/*.asm) $(wildcard ./lib/*.asm) \
 			$(wildcard bank?/*.asm) $(wildcard bank?/gfx/*.asm) \
+			$(wildcard ./gfx/*.asm) \
 			$(wildcard ./sys/*.asm)
-DEPS_H		= $(wildcard ./include/*.h) $(wildcard ./sys/*.h)
+DEPS_H		= $(wildcard $(INC_DIR)/*.h) $(wildcard ./include/*.h) \
+			$(wildcard ./sys/*.h)
 
 DEPS_M4		= $(wildcard ./lib/*.m4)
 DEPS_S		= $(DEPS_M4:.m4=.s)
@@ -25,12 +36,12 @@ TARGET		= proton.bin
 
 .PHONY: all
 all: $(TARGET) 
-	chmod ug+x $(TARGET)
 
 $(TARGET): $(DEPS_S) $(DEPS_SP) $(DEPS_PF) $(DEPS_ASM) $(DEPS_H)
 
 %.bin: %.asm
 	$(ASM) "$<" $(ASM_FLAGS) -o"$@"
+	chmod ug+x $(TARGET)
 
 %.sp: %.sprite $<
 	$(PERL) $(MAKE_SPRITE) "$<" -o"$@" -H1
