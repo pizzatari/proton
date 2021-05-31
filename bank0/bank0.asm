@@ -19,7 +19,8 @@ Bank0_TitleLoop SUBROUTINE
 	lda Mode
 	cmp #MODE_WAVE
 	beq Bank0_WaveLoop
-    jmp Bank0_TitleLoop
+	cmp #MODE_GAME
+	JUMP_BANK PROC_GAME_INIT, 1
 
 Bank0_WaveLoop SUBROUTINE
     inc FrameCtr
@@ -481,6 +482,17 @@ Bank0_WaveOverscan SUBROUTINE
     lda #[OVERSCAN_HEIGHT-1]*76/64
     sta TIM64T
 
+	; check fire button
+    lda #JOY_FIRE
+    bit INPT4
+    bne .Continue1
+    ldx #MODE_GAME	; progress to wave screen
+    stx Mode
+	jsr Bank0_WaveInit
+.Continue1
+
+
+#if 0
 	; delay joystick input
     lda Delay
     bne .CheckReset
@@ -493,14 +505,15 @@ Bank0_WaveOverscan SUBROUTINE
     ldx #MODE_GAME_INIT
     stx Mode
     ;JUMP_BANK Bank1_GameInit
+#endif
 
 .CheckReset
 	; check for reset button
     lda SWCHB
     and #SWITCH_RESET
-    bne .Continue
+    bne .Continue2
     jmp Bank0_Reset
-.Continue
+.Continue2
 
     TIMER_WAIT
     rts
@@ -981,20 +994,28 @@ Bank0_CallProcedure SUBROUTINE
     rol
     tay
     lda ProceduresLo,y
-    sta Ptr
+    sta TempPtr
     lda ProceduresHi,y
-    sta Ptr+1
+    sta TempPtr+1
 
     lda #>[.Return-1]
     pha
     lda #<[.Return-1]
     pha
-    jmp (Ptr)
+    jmp (TempPtr)
 .Return
     rts
 #endif
 
     include "bank0/digits.asm"
+
+	INCLUDE_BANKSWITCH_SUBS 0
+
+PROC_GAME_INIT = 0
+Bank0_ProcTableHi
+	dc.b >Bank1_GameInit
+Bank0_ProcTableLo
+	dc.b <Bank1_GameInit
     
     PAGE_BYTES_REMAINING
 

@@ -1423,6 +1423,10 @@ Bank1_HorizPositionPF SUBROUTINE
     PAGE_BOUNDARY_CHECK "Horiz Positioning"
     PAGE_BYTES_REMAINING
 
+	INCLUDE_BANKSWITCH_SUBS 1
+Bank1_ProcTableHi
+Bank1_ProcTableLo
+
 ; -----------------------------------------------------------------------------
     ORG BANK1_ORG + $e00
     PAGE_BOUNDARY_SET

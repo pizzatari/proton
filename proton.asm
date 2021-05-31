@@ -151,11 +151,11 @@ RowNum          ds.w 1              ; row number associated with the bottom row
 Mode            ds.b 1
 Delay           ds.b 1
 SpritePtrs      ds.w MAX_NUM_PTRS
-Ptr             ds.w 1
+TempPtr         ds.w 1
 RandLFSR8       ds.b 1
 RandLFSR16		= SpritePtrs
-Temp            = Ptr
-Temp2           = Ptr+1
+Temp            = TempPtr
+Temp2           = TempPtr+1
 MemEnd
 
     ORG MemEnd
