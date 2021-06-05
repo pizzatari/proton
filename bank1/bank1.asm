@@ -1,11 +1,13 @@
-    SEG rom
     ORG BANK1_ORG
+	RORG BANK1_RORG
 
 Bank1_Reset
-    ; switch to bank 0 if we start here
     bit BANK0_HOTSPOT
 
-Bank1_GameInit
+Bank1_GameInit SUBROUTINE
+    lda #MODE_GAME
+    sta Mode
+
     jsr Bank1_InitScreen
     jsr Bank1_InitPlayer
     jsr Bank1_SpritePtrsClear
@@ -13,12 +15,14 @@ Bank1_GameInit
 
     lda #>RAND_SEED
     eor INTIM
-    bne .Good
+    bne .GoodSeed
     lda #<RAND_SEED
-.Good
+.GoodSeed
     sta RandLFSR8
     lda #JOY_DELAY
     sta Delay
+
+	TIMER_WAIT
 
 Bank1_GameFrame SUBROUTINE
     inc FrameCtr
@@ -818,6 +822,8 @@ Bank1_SpawnInBottom SUBROUTINE
 
 ; -----------------------------------------------------------------------------
     ORG BANK1_ORG + $a00
+    RORG BANK1_RORG + $a00
+
     PAGE_BOUNDARY_SET
 
 Bank1_GameKernel SUBROUTINE ; executes between 1 and 16 lines
@@ -983,6 +989,8 @@ Bank1_GeneralIO SUBROUTINE
 
 ; -----------------------------------------------------------------------------
     ORG BANK1_ORG + $b00
+    RORG BANK1_RORG + $b00
+
     PAGE_BOUNDARY_SET
 
 Bank1_ShrinkerRowKernel SUBROUTINE        ; 43 (43)
@@ -1146,12 +1154,11 @@ Bank1_PlayAudio SUBROUTINE
     sta AUDF0
     rts
 
-    include "lib/random.asm"
-
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG BANK1_ORG + $c0f
+    ORG BANK1_ORG + $c00
+    RORG BANK1_RORG + $c00
 
     PAGE_BOUNDARY_SET
 Bank1_HUDKernel SUBROUTINE             ; 24 (24)
@@ -1234,18 +1241,6 @@ Bank1_HUDKernel SUBROUTINE             ; 24 (24)
     PAGE_BOUNDARY_CHECK "(3) Kernels"
     PAGE_BYTES_REMAINING
 
-;NusizPattern
-;    dc.b 3, 1, 6, 3, 4, 2, 0, 3
-
-AirSprites
-    dc.b <Bank1_BlankGfx, <FighterGfx
-GroundSprites
-    dc.b <Bank1_BlankGfx, <CondoGfx, <HouseGfx, <IndustryGfx
-    dc.b <CropsGfx, <FuelGfx, <DishGfx, <PumpGfx
-
-DigitTable
-    dc.b <Digit0, <Digit1, <Digit2, <Digit3, <Digit4
-    dc.b <Digit5, <Digit6, <Digit7, <Digit8, <Digit9
 
     PAGE_BOUNDARY_SET
 ; -----------------------------------------------------------------------------
@@ -1337,6 +1332,74 @@ Bank1_DrawTitleSprite SUBROUTINE
     PAGE_BOUNDARY_CHECK "(4) Kernels"
     PAGE_BYTES_REMAINING
 
+; -----------------------------------------------------------------------------
+    ORG BANK1_ORG + $d00 
+    RORG BANK1_RORG + $d00 
+
+    PAGE_BOUNDARY_SET
+    include "bank1/sprites.asm"
+    PAGE_BOUNDARY_CHECK "Graphics data (1)"
+    PAGE_BYTES_REMAINING
+
+; -----------------------------------------------------------------------------
+    ORG BANK1_ORG + $e00
+    RORG BANK1_RORG + $e00
+
+    PAGE_BOUNDARY_SET
+    include "gfx/hud.asm"
+    include "gfx/playfield.asm"
+    PAGE_BOUNDARY_CHECK "Graphics data (2)"
+    PAGE_BYTES_REMAINING
+
+; -----------------------------------------------------------------------------
+    ORG BANK1_ORG + $f00 
+    RORG BANK1_RORG + $f00 
+
+	INCLUDE_BANKSWITCH_SUBS 1
+Bank1_ProcTableHi
+Bank1_ProcTableLo
+
+    include "lib/random.asm"
+;NusizPattern
+;    dc.b 3, 1, 6, 3, 4, 2, 0, 3
+
+AirSprites
+    dc.b <Bank1_BlankGfx, <FighterGfx
+GroundSprites
+    dc.b <Bank1_BlankGfx, <CondoGfx, <HouseGfx, <IndustryGfx
+    dc.b <CropsGfx, <FuelGfx, <DishGfx, <PumpGfx
+
+DigitTable
+    dc.b <Digit0, <Digit1, <Digit2, <Digit3, <Digit4
+    dc.b <Digit5, <Digit6, <Digit7, <Digit8, <Digit9
+
+Bank1_StatusColors
+    ; Bit:  0 (mode)
+    ; Bit:  1 (ctr)
+    ;    00         01
+    dc.b COLOR_BLUE, COLOR_BLUE
+    ;    10         11
+    dc.b COLOR_BLUE, COLOR_RED
+
+Bank1_StatusNusiz
+    dc.b 3      ; ST_NORM
+    dc.b 6      ; ST_ALERT
+
+Bank1_StatusPos0
+    dc.b 71     ; ST_NORM
+    dc.b 55     ; ST_ALERT
+Bank1_StatusPos1
+    dc.b 79     ; ST_NORM
+    dc.b 63     ; ST_ALERT
+
+Bank1_Mult7
+    dc.b   0,   7,  14,  21,  28,  35,  42,  49,  56,  63
+    ;dc.b  70,  77,  84,  91,  98, 105, 112, 119, 126, 133
+    ;dc.b 140, 147, 154, 161, 168, 175, 182, 189, 196, 203
+    ;dc.b 210, 217, 224, 231, 238, 245, 252
+
+    PAGE_BYTES_REMAINING
+
     PAGE_BOUNDARY_SET
 ; -----------------------------------------------------------------------------
 ; Desc:     Positions an object horizontally using the Battlezone algorithm.
@@ -1423,53 +1486,11 @@ Bank1_HorizPositionPF SUBROUTINE
     PAGE_BOUNDARY_CHECK "Horiz Positioning"
     PAGE_BYTES_REMAINING
 
-	INCLUDE_BANKSWITCH_SUBS 1
-Bank1_ProcTableHi
-Bank1_ProcTableLo
-
-; -----------------------------------------------------------------------------
-    ORG BANK1_ORG + $e00
-    PAGE_BOUNDARY_SET
-    include "gfx/hud.asm"
-    include "gfx/playfield.asm"
-    PAGE_BOUNDARY_CHECK "Graphics data"
-    PAGE_BYTES_REMAINING
-
-; -----------------------------------------------------------------------------
-    ORG BANK1_ORG + $f00 
-    include "bank1/sprites.asm"
-
-Bank1_StatusColors
-    ; Bit:  0 (mode)
-    ; Bit:  1 (ctr)
-    ;    00         01
-    dc.b COLOR_BLUE, COLOR_BLUE
-    ;    10         11
-    dc.b COLOR_BLUE, COLOR_RED
-
-Bank1_StatusNusiz
-    dc.b 3      ; ST_NORM
-    dc.b 6      ; ST_ALERT
-
-Bank1_StatusPos0
-    dc.b 71     ; ST_NORM
-    dc.b 55     ; ST_ALERT
-Bank1_StatusPos1
-    dc.b 79     ; ST_NORM
-    dc.b 63     ; ST_ALERT
-
-Bank1_Mult7
-    dc.b   0,   7,  14,  21,  28,  35,  42,  49,  56,  63
-    ;dc.b  70,  77,  84,  91,  98, 105, 112, 119, 126, 133
-    ;dc.b 140, 147, 154, 161, 168, 175, 182, 189, 196, 203
-    ;dc.b 210, 217, 224, 231, 238, 245, 252
-
-    PAGE_BYTES_REMAINING
-
 ; -----------------------------------------------------------------------------
 ; Interrupts
 ; -----------------------------------------------------------------------------
     ORG BANK1_ORG + $ffa
+    RORG BANK1_RORG + $ffa
 Bank1_Interrupts
     dc.w Bank1_Reset           ; NMI
     dc.w Bank1_Reset           ; RESET

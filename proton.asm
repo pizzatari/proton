@@ -76,6 +76,7 @@ BANK2_ORG           = $3000
 BANK2_RORG          = $d000
 BANK3_ORG           = $4000
 BANK3_RORG          = $f000
+
 BANK0_HOTSPOT       = $fff6
 BANK1_HOTSPOT       = BANK0_HOTSPOT+1
 BANK2_HOTSPOT       = BANK0_HOTSPOT+2

@@ -1,10 +1,11 @@
-    SEG rom
     ORG BANK0_ORG
+    RORG BANK0_RORG
 
 Bank0_Reset
     nop     ; 3 bytes for bit instruction
     nop
     nop
+
     sei
     CLEAN_START
 	cli
@@ -16,18 +17,14 @@ Bank0_TitleLoop SUBROUTINE
 	jsr Bank0_TitleVertBlank
 	jsr Bank0_TitleKernel
 	jsr Bank0_TitleOverscan
-	lda Mode
-	cmp #MODE_WAVE
-	beq Bank0_WaveLoop
-	cmp #MODE_GAME
-	JUMP_BANK PROC_GAME_INIT, 1
+	jmp Bank0_TitleLoop
 
 Bank0_WaveLoop SUBROUTINE
     inc FrameCtr
 	jsr Bank0_WaveVertBlank
 	jsr Bank0_WaveKernel
 	jsr Bank0_WaveOverscan
-    jmp Bank0_WaveLoop
+	jmp Bank0_WaveLoop
 
 ; -----------------------------------------------------------------------------
 ; Title code
@@ -95,175 +92,175 @@ Bank0_TitleVertBlank SUBROUTINE
     rts
 
 Bank0_TitleKernel SUBROUTINE
-    sta WSYNC               ; WSYNC for timing
-    lda #COLOR_BLACK        ; 2 (2)
-    sta COLUBK              ; 3 (5)
-    sta COLUPF              ; 3 (8)
+    sta WSYNC                   ; WSYNC for timing
+    lda #COLOR_BLACK            ; 2 (2)
+    sta COLUBK                  ; 3 (5)
+    sta COLUPF                  ; 3 (8)
 
     ; ------------------------------------------------------------------------
     ; blank space
     ; ------------------------------------------------------------------------
-    SLEEP_LINES 84          ; 84 (16)
+    SLEEP_LINES 84              ; 84 (16)
 
     lda #3
-    sta VDELP0              ; 3 (19)
-    sta VDELP1              ; 3 (22)
-    sta NUSIZ0              ; 3 (25)
-    sta NUSIZ1              ; 3 (28)
+    sta VDELP0                  ; 3 (19)
+    sta VDELP1                  ; 3 (22)
+    sta NUSIZ0                  ; 3 (25)
+    sta NUSIZ1                  ; 3 (28)
 
-    lda #COLOR_WHITE        ; 2 (30)
-    sta COLUP0              ; 2 (32)
-    sta COLUP1              ; 2 (34)
+    lda #COLOR_WHITE            ; 2 (30)
+    sta COLUP0                  ; 2 (32)
+    sta COLUP1                  ; 2 (34)
 
-    lda #0                  ; 2 (36)
-    sta GRP0                ; 3 (39) 
-    sta GRP1                ; 3 (42) 
-    sta GRP0                ; 3 (45) 
-    lda #$ff                ; 2 (47)
-    sta PF0                 ; 3 (50)
+    lda #0                      ; 2 (36)
+    sta GRP0                    ; 3 (39) 
+    sta GRP1                    ; 3 (42) 
+    sta GRP0                    ; 3 (45) 
+    lda #$ff                    ; 2 (47)
+    sta PF0                     ; 3 (50)
 
     ; ------------------------------------------------------------------------
     ; planet
     ; ------------------------------------------------------------------------
-    clc                     ; 2 (52)
-    ldy #TITLEPLANET_HEIGHT*4-1     ; 2 (54)
+    clc                         ; 2 (52)
+    ldy #TITLEPLANET_HEIGHT*4-1         ; 2 (54)
 .TitleLoop
-    tya                     ; 2 (58)
-    lsr                     ; 2 (60)
-    lsr                     ; 2 (62)
+    tya                         ; 2 (58)
+    lsr                         ; 2 (60)
+    lsr                         ; 2 (62)
     sta WSYNC
-    tax                     ; 2 (2)
-    lda #$ff                ; 2 (4)
-    sta PF1                 ; 3 (7)
-    sta PF2                 ; 3 (10)
-    lda TitlePalette,x      ; 4 (14)
-    sta COLUBK              ; 3 (17)
-    SLEEP 20                ; 20 (37)
-    lda TitlePlanet1,x      ; 4 (41)
-    sta PF1                 ; 3 (44)
-    lda TitlePlanet2,x      ; 4 (48)
-    sta PF2                 ; 3 (51)
-    dey                     ; 2 (53)
-    cpy #4                  ; 2 (55) 
-    bpl .TitleLoop          ; 2 (57)
+    tax                         ; 2 (2)
+    lda #$ff                    ; 2 (4)
+    sta PF1                     ; 3 (7)
+    sta PF2                     ; 3 (10)
+    lda TitlePalette,x          ; 4 (14)
+    sta COLUBK                  ; 3 (17)
+    SLEEP 20                    ; 20 (37)
+    lda TitlePlanet1,x          ; 4 (41)
+    sta PF1                     ; 3 (44)
+    lda TitlePlanet2,x          ; 4 (48)
+    sta PF2                     ; 3 (51)
+    dey                         ; 2 (53)
+    cpy #4                      ; 2 (55) 
+    bpl .TitleLoop              ; 2 (57)
 
-    ldy #4-1                ; 2 (59)
-    jsr Bank0_DrawTitleSprite     ; 6 (65)    returns on cycle 18
+    ldy #4-1                    ; 2 (59)
+    jsr Bank0_DrawTitleSprite         ; 6 (65)    returns on cycle 18
 
     ; ------------------------------------------------------------------------
     ; 1 (19) line blank spacer
     ; ------------------------------------------------------------------------
-    ldy #0                  ; 2 (21)
-    sta GRP0                ; 3 (24)
-    sta GRP1                ; 3 (27)
+    ldy #0                      ; 2 (21)
+    sta GRP0                    ; 3 (24)
+    sta GRP1                    ; 3 (27)
 
-    ldx #P0_OBJ             ; 2 (29)
-    lda #164                ; 2 (31)
-    jsr Bank0_HorizPositionBG     ; 6 (37)
+    ldx #P0_OBJ                 ; 2 (29)
+    lda #164                    ; 2 (31)
+    jsr Bank0_HorizPositionBG         ; 6 (37)
 
-    lda #0                  ; 2 (20)
-    sta NUSIZ0              ; 3 (23)
-    sta NUSIZ1              ; 3 (26)
-    sta VDELP0              ; 3 (29)
-    sta VDELP1              ; 3 (32)
-    ldx #COLOR_YELLOW       ; 2 (34)
+    lda #0                      ; 2 (20)
+    sta NUSIZ0                  ; 3 (23)
+    sta NUSIZ1                  ; 3 (26)
+    sta VDELP0                  ; 3 (29)
+    sta VDELP1                  ; 3 (32)
+    ldx #COLOR_YELLOW           ; 2 (34)
     sta WSYNC
-    sta HMOVE               ; 3 (37) 
-    sta PF0                 ; 3 (40)
-    sta PF1                 ; 3 (43)
-    sta PF2                 ; 3 (46)
-    stx COLUPF              ; 3 (49)
+    sta HMOVE                   ; 3 (37) 
+    sta PF0                     ; 3 (40)
+    sta PF1                     ; 3 (43)
+    sta PF2                     ; 3 (46)
+    stx COLUPF                  ; 3 (49)
 
     ; ------------------------------------------------------------------------
     ; laser top
     ; ------------------------------------------------------------------------
-    ldy #7                  ; 2 (51)
+    ldy #7                      ; 2 (51)
 .Laser0
-    lda (LaserPtr),y        ; 5 (5)
-    sta GRP0                ; 3 (3)
+    lda (LaserPtr),y            ; 5 (5)
+    sta GRP0                    ; 3 (3)
     sta WSYNC
-    dey                     ; 2 (5)
-    cpy #4                  ; 2 (7)
-    bne .Laser0             ; 2 (9)
+    dey                         ; 2 (5)
+    cpy #4                      ; 2 (7)
+    bne .Laser0                 ; 2 (9)
 
     ; ------------------------------------------------------------------------
     ; laser middle line
     ; ------------------------------------------------------------------------
-    lda (LaserPtr),y        ; 5 (14)
-    ldy #0                  ; 2 (16)
-    sta GRP0                ; 3 (19)
+    lda (LaserPtr),y            ; 5 (14)
+    ldy #0                      ; 2 (16)
+    sta GRP0                    ; 3 (19)
 
-    lda LaserPF             ; 3 (22)
-    ldx LaserPF+1           ; 3 (25)
+    lda LaserPF                 ; 3 (22)
+    ldx LaserPF+1               ; 3 (25)
 
     sta WSYNC
-    sta PF0                 ; 3 (3)
-    stx PF1                 ; 3 (6)
-    lda LaserPF+2           ; 3 (9)
-    sta PF2                 ; 3 (12)
+    sta PF0                     ; 3 (3)
+    stx PF1                     ; 3 (6)
+    lda LaserPF+2               ; 3 (9)
+    sta PF2                     ; 3 (12)
 
-    SLEEP_21                ; 21 (33)
-    lda LaserPF+3           ; 3 (36)
-    sta PF0                 ; 3 (39)
-    lda LaserPF+4           ; 3 (42)
-    sta PF1                 ; 3 (45)
-    lda LaserPF+5           ; 3 (48)
-    sta PF2                 ; 3 (51)
+    SLEEP_21                    ; 21 (33)
+    lda LaserPF+3               ; 3 (36)
+    sta PF0                     ; 3 (39)
+    lda LaserPF+4               ; 3 (42)
+    sta PF1                     ; 3 (45)
+    lda LaserPF+5               ; 3 (48)
+    sta PF2                     ; 3 (51)
 
     ; ------------------------------------------------------------------------
     ; laser bottom
     ; ------------------------------------------------------------------------
-    ldx #0                  ; 2 (54)
-    ldy #3                  ; 2 (56)
+    ldx #0                      ; 2 (54)
+    ldy #3                      ; 2 (56)
 .Laser1
-    lda LaserGfx0,y         ; 4 (21)
-    lda (LaserPtr),y        ; 5 (26)
+    lda LaserGfx0,y             ; 4 (21)
+    lda (LaserPtr),y            ; 5 (26)
     sta WSYNC
-    sta GRP0                ; 3 (3)
-    stx PF0                 ; 3 (6)
-    stx PF1                 ; 3 (9)
-    stx PF2                 ; 3 (12)
-    dey                     ; 2 (14)
-    bpl .Laser1             ; 2 (16)
+    sta GRP0                    ; 3 (3)
+    stx PF0                     ; 3 (6)
+    stx PF1                     ; 3 (9)
+    stx PF2                     ; 3 (12)
+    dey                         ; 2 (14)
+    bpl .Laser1                 ; 2 (16)
 
-    lda #0                  ; 2 (18)
-    sta GRP0                ; 3 (21)
+    lda #0                      ; 2 (18)
+    sta GRP0                    ; 3 (21)
 
     ; ------------------------------------------------------------------------
     ; PROTON title
     ; ------------------------------------------------------------------------
-    clc                     ; 2 (23)
-    ldy #TITLEPROTON_HEIGHT-1; 2 (25)
+    clc                         ; 2 (23)
+    ldy #TITLEPROTON_HEIGHT-1    ; 2 (25)
 .NameLoop
-    tya                     ; 2 (60)
+    tya                         ; 2 (60)
     sta WSYNC
-    tax                     ; 2 (2)
-    lda TitleAuthorPalette,x  ; 4 (6)
-    sta COLUPF              ; 3 (9)
-    lda TitleProton0,x      ; 4 (13)
-    sta PF0                 ; 3 (16)
-    lda TitleProton1,x      ; 4 (20)
-    sta PF1                 ; 3 (23)
-    lda TitleProton2,x      ; 4 (27)
-    sta PF2                 ; 3 (30)
-    nop                     ; 2 (32)
-    lda TitleProton3,x      ; 4 (36)
-    sta PF0                 ; 3 (39)
-    lda TitleProton4,x      ; 4 (43)
-    sta PF1                 ; 3 (46)
-    lda TitleProton5,x      ; 4 (50)
-    sta PF2                 ; 3 (53)
-    dey                     ; 2 (55)
-    bpl .NameLoop           ; 2 (57)
+    tax                         ; 2 (2)
+    lda TitleAuthorPalette,x      ; 4 (6)
+    sta COLUPF                  ; 3 (9)
+    lda TitleProton0,x          ; 4 (13)
+    sta PF0                     ; 3 (16)
+    lda TitleProton1,x          ; 4 (20)
+    sta PF1                     ; 3 (23)
+    lda TitleProton2,x          ; 4 (27)
+    sta PF2                     ; 3 (30)
+    nop                         ; 2 (32)
+    lda TitleProton3,x          ; 4 (36)
+    sta PF0                     ; 3 (39)
+    lda TitleProton4,x          ; 4 (43)
+    sta PF1                     ; 3 (46)
+    lda TitleProton5,x          ; 4 (50)
+    sta PF2                     ; 3 (53)
+    dey                         ; 2 (55)
+    bpl .NameLoop               ; 2 (57)
 
     ; ------------------------------------------------------------------------
     ; blank space
     ; ------------------------------------------------------------------------
-    lda #0                  ; 2 (59)
+    lda #0                      ; 2 (59)
     sta WSYNC
-    sta PF0                 ; 3 (3)
-    sta PF1                 ; 3 (6) 
-    sta PF2                 ; 3 (9)
+    sta PF0                     ; 3 (3)
+    sta PF1                     ; 3 (6) 
+    sta PF2                     ; 3 (9)
 
     ; ------------------------------------------------------------------------
     ; copyright
@@ -343,11 +340,13 @@ Bank0_TitleOverscan SUBROUTINE
     lda #JOY_FIRE
     bit INPT4
     bne .Continue
-    ldx #MODE_WAVE	; progress to wave screen
-    stx Mode
 	jsr Bank0_WaveInit
-.Continue
+	pla				; remove current subroutine from stack
+	pla
+	TIMER_WAIT
+	jmp Bank0_WaveLoop
 
+.Continue
     TIMER_WAIT
     rts
 
@@ -387,6 +386,8 @@ Bank0_TitleAnimate SUBROUTINE
 ; Wave code
 ; -----------------------------------------------------------------------------
 Bank0_WaveInit SUBROUTINE
+    lda #MODE_WAVE
+    sta Mode
     lda #JOY_DELAY
     sta Delay
     jsr Bank0_SpritePtrsClear
@@ -402,7 +403,9 @@ Bank0_WaveInit SUBROUTINE
     sta VDELP1              ; 3 (22)
     sta NUSIZ0              ; 3 (25)
     sta NUSIZ1              ; 3 (28)
-    rts
+	rts
+
+	;TIMER_WAIT				; wait for overscan to finish
 
 Bank0_WaveVertBlank SUBROUTINE
     VERTICAL_SYNC
@@ -482,38 +485,26 @@ Bank0_WaveOverscan SUBROUTINE
     lda #[OVERSCAN_HEIGHT-1]*76/64
     sta TIM64T
 
-	; check fire button
-    lda #JOY_FIRE
-    bit INPT4
-    bne .Continue1
-    ldx #MODE_GAME	; progress to wave screen
-    stx Mode
-	jsr Bank0_WaveInit
-.Continue1
-
-
-#if 0
-	; delay joystick input
+	; joystick input with delay
     lda Delay
-    bne .CheckReset
-    dec Delay
+    bne .Decrement
     lda #JOY_FIRE
     bit INPT4
     bne .CheckReset
-    
-	; continue to next mode
-    ldx #MODE_GAME_INIT
-    stx Mode
-    ;JUMP_BANK Bank1_GameInit
-#endif
-
-.CheckReset
+Debug
+	pla						; remove current subroutine from stack
+	pla
+    JUMP_BANK PROC_GAME_INIT, 1, 0
+.Decrement
+	dec Delay
+	
 	; check for reset button
+.CheckReset
     lda SWCHB
     and #SWITCH_RESET
-    bne .Continue2
+    bne .Continue
     jmp Bank0_Reset
-.Continue2
+.Continue
 
     TIMER_WAIT
     rts
@@ -748,8 +739,9 @@ Bank0_GeneralIO SUBROUTINE
 
 ; -----------------------------------------------------------------------------
     ORG BANK0_ORG + $b00
-    PAGE_BOUNDARY_SET
+    RORG BANK0_RORG + $b00
 
+    PAGE_BOUNDARY_SET
 Bank0_PlayAudio SUBROUTINE
     ; play laser sounds
     lda PlyrFire
@@ -798,7 +790,8 @@ Bank0_PlayAudio SUBROUTINE
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
-    ORG BANK0_ORG + $c0f
+    ORG BANK0_ORG + $c00
+    RORG BANK0_RORG + $c00
 
     PAGE_BOUNDARY_SET
 ; -----------------------------------------------------------------------------
@@ -1009,18 +1002,12 @@ Bank0_CallProcedure SUBROUTINE
 
     include "bank0/digits.asm"
 
-	INCLUDE_BANKSWITCH_SUBS 0
-
-PROC_GAME_INIT = 0
-Bank0_ProcTableHi
-	dc.b >Bank1_GameInit
-Bank0_ProcTableLo
-	dc.b <Bank1_GameInit
-    
     PAGE_BYTES_REMAINING
 
 ; -----------------------------------------------------------------------------
     ORG BANK0_ORG + $e00
+    RORG BANK0_RORG + $e00
+
     PAGE_BOUNDARY_SET
     include "gen/title-planet.pf"
     include "gen/title-proton.pf"
@@ -1030,6 +1017,15 @@ Bank0_ProcTableLo
 
 ; -----------------------------------------------------------------------------
     ORG BANK0_ORG + $f00 
+    RORG BANK0_RORG + $f00 
+
+	INCLUDE_BANKSWITCH_SUBS 0
+PROC_GAME_INIT = 0
+Bank0_ProcTableHi
+	dc.b >Bank1_GameInit
+Bank0_ProcTableLo
+	dc.b <Bank1_GameInit
+    
     include "bank0/sprites.asm"
     include "gfx/title.asm"
 
@@ -1064,6 +1060,8 @@ Bank0_Mult7
 ; Interrupts
 ; -----------------------------------------------------------------------------
     ORG BANK0_ORG + $ffa
+    RORG BANK0_RORG + $ffa
+
 Bank0_Interrupts
     dc.w Bank0_Reset           ; NMI
     dc.w Bank0_Reset           ; RESET
