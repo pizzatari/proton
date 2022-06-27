@@ -1,8 +1,7 @@
 # proton
 Battle for Proton (Atari 2600)
 
-Built within a Cygwin environment. Dasm and Perl should be in your PATH.
+This is a personal project under my copyright. No support provided. You may not distribute source or binaries. The source code is made public for review and archival reasons. 
 
-This is a personal project under my copyright.
+Built within a Cygwin environment, but it should also build uner any UNIX or Linux platform. Dasm and Perl must be compiled/installed separately and be in your PATH.
 
-No support provided. You may not distribute source or binaries developed by me. The source code is made public for review and archival reasons. 
